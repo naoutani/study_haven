@@ -632,16 +632,19 @@
   <div class="auth-box">
     <p class="eyebrow">書斎へのかぎ</p>
     <h1>学習のあかり</h1>
-    <p class="auth-desc">メールアドレスを入力してください。<br>書斎へのリンクをお送りします。</p>
+    <p class="auth-desc" id="auth-desc">メールアドレスを入力してください。<br>6桁のログインコードをお送りします。</p>
     <div class="auth-form" id="auth-form">
       <input type="email" id="auth-email" class="auth-email-input"
              placeholder="your@email.com" autocomplete="email" inputmode="email">
-      <button id="auth-btn" class="auth-submit-btn">ログインリンクを送る</button>
+      <button id="auth-btn" class="auth-submit-btn">コードを送る</button>
     </div>
-    <p id="auth-sent" hidden class="auth-sent-msg">
-      メールをご確認ください。<br>
-      リンクをクリックすると<strong>書斎が開きます</strong>。
-    </p>
+    <div class="auth-form" id="auth-code-form" hidden>
+      <input type="text" id="auth-code" class="auth-email-input"
+             placeholder="123456" inputmode="numeric" maxlength="6"
+             autocomplete="one-time-code" style="letter-spacing:0.4em; text-align:center;">
+      <button id="auth-code-btn" class="auth-submit-btn">ログイン</button>
+    </div>
+    <p id="auth-sent" hidden class="auth-sent-msg"></p>
   </div>
 </div>
 
@@ -781,6 +784,9 @@ const mainApp        = document.getElementById('main-app');
 const authEmailEl    = document.getElementById('auth-email');
 const authBtnEl      = document.getElementById('auth-btn');
 const authFormEl     = document.getElementById('auth-form');
+const authCodeFormEl = document.getElementById('auth-code-form');
+const authCodeEl     = document.getElementById('auth-code');
+const authCodeBtnEl  = document.getElementById('auth-code-btn');
 const authSentEl     = document.getElementById('auth-sent');
 const rowEl          = document.getElementById('subjects-row');
 const swEl           = document.getElementById('settings-wrap');
@@ -794,27 +800,60 @@ const rstBtn         = document.getElementById('rst');
 const panes          = [...document.querySelectorAll('.gp')];
 const labels         = [...document.querySelectorAll('.gl')];
 
-/* ── Auth ──────────────────────────────────── */
+let pendingEmail = '';
+
+/* ── Auth: ① メール送信 ──────────────────── */
 authBtnEl.addEventListener('click', async () => {
   const email = authEmailEl.value.trim();
   if (!email) return;
   authBtnEl.disabled = true;
   authBtnEl.textContent = '送信中...';
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin + window.location.pathname }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email });
   if (error) {
     authBtnEl.disabled = false;
-    authBtnEl.textContent = 'ログインリンクを送る';
-  } else {
-    authFormEl.hidden = true;
+    authBtnEl.textContent = 'コードを送る';
     authSentEl.hidden = false;
+    authSentEl.textContent = 'エラー: ' + error.message;
+  } else {
+    pendingEmail = email;
+    authFormEl.hidden     = true;
+    authCodeFormEl.hidden = false;
+    authSentEl.hidden     = false;
+    authSentEl.innerHTML  = 'メールに届いた<strong>6桁のコード</strong>を入力してください。';
+    authCodeEl.focus();
   }
 });
 
 authEmailEl.addEventListener('keydown', e => {
   if (e.key === 'Enter') authBtnEl.click();
+});
+
+/* ── Auth: ② コード入力でログイン ─────────── */
+authCodeBtnEl.addEventListener('click', async () => {
+  const code = authCodeEl.value.trim();
+  if (!code || !pendingEmail) return;
+  authCodeBtnEl.disabled = true;
+  authCodeBtnEl.textContent = '確認中...';
+  const { data, error } = await sb.auth.verifyOtp({
+    email: pendingEmail,
+    token: code,
+    type: 'email'
+  });
+  if (error) {
+    authCodeBtnEl.disabled = false;
+    authCodeBtnEl.textContent = 'ログイン';
+    authSentEl.innerHTML = 'コードが違います。もう一度確認してください。<br><small>' + error.message + '</small>';
+  } else if (data?.session?.user) {
+    currentUser = data.session.user;
+    await initApp();
+    loadingOverlay.hidden = true;
+    authOverlay.hidden    = true;
+    mainApp.hidden        = false;
+  }
+});
+
+authCodeEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') authCodeBtnEl.click();
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -823,33 +862,8 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 
 /* ── Auth state ────────────────────────────── */
 
-// ページ読み込み時にセッションを確認
+// ページ読み込み時にセッションを確認（ログイン済みの場合）
 (async () => {
-  // ① URL に token_hash がある場合（新テンプレート方式）
-  const urlParams  = new URLSearchParams(window.location.search);
-  const tokenHash  = urlParams.get('token_hash');
-  const tokenType  = urlParams.get('type');
-
-  if (tokenHash && tokenType) {
-    window.history.replaceState({}, '', window.location.pathname);
-    const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: tokenType });
-    if (data?.session?.user) {
-      currentUser = data.session.user;
-      await initApp();
-      loadingOverlay.hidden = true;
-      authOverlay.hidden    = true;
-      mainApp.hidden        = false;
-      return;
-    }
-    // エラー内容を表示（デバッグ用）
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = false;
-    authSentEl.hidden     = false;
-    authSentEl.innerHTML  = 'エラー: ' + (error?.message || 'セッションが取得できませんでした') + '<br><small>token_hash: ' + tokenHash.slice(0,8) + '...</small>';
-    return;
-  }
-
-  // ② すでにセッションがある場合（ログイン済み）
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     currentUser = session.user;
