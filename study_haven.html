@@ -822,17 +822,36 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 });
 
 /* ── Auth state ────────────────────────────── */
-sb.auth.onAuthStateChange(async (event, session) => {
-  currentUser = session?.user ?? null;
-  if (currentUser) {
+
+// ページ読み込み時にセッションを確認（マジックリンク対応）
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
     await initApp();
     loadingOverlay.hidden = true;
     authOverlay.hidden    = true;
     mainApp.hidden        = false;
   } else {
     loadingOverlay.hidden = true;
-    mainApp.hidden        = true;
     authOverlay.hidden    = false;
+  }
+})();
+
+// ログイン・ログアウト後の変化を監視
+sb.auth.onAuthStateChange(async (event, session) => {
+  const user = session?.user ?? null;
+  if (user && !currentUser) {
+    currentUser = user;
+    await initApp();
+    loadingOverlay.hidden = true;
+    authOverlay.hidden    = true;
+    mainApp.hidden        = false;
+  } else if (!user && currentUser) {
+    currentUser = null;
+    state = { subjects: [], currentId: null };
+    mainApp.hidden     = true;
+    authOverlay.hidden = false;
   }
 });
 
