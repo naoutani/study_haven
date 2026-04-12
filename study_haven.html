@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Zen+Kaku+Gothic+Antique:wght@300;400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* 横スクロール防止 */
     html, body { overflow-x: hidden; }
 
     :root {
@@ -38,7 +38,6 @@
       display: flex;
       justify-content: center;
       padding: 4vh 1.2rem 8vh;
-      /* iPhone ノッチ・ホームバー対応 */
       padding-left:  max(1.2rem, env(safe-area-inset-left));
       padding-right: max(1.2rem, env(safe-area-inset-right));
       padding-bottom: max(8vh, env(safe-area-inset-bottom));
@@ -142,7 +141,7 @@
     .btn-settings:hover  { opacity: 1; }
     .btn-settings.active { color: var(--gold); opacity: 0.9; }
 
-    /* ── Settings panel (grid-row trick) ── */
+    /* ── Settings panel ── */
     .settings-wrap {
       width: 100%;
       display: grid;
@@ -156,9 +155,7 @@
       opacity: 1;
     }
 
-    .settings-inner {
-      overflow: hidden;
-    }
+    .settings-inner { overflow: hidden; }
 
     .settings-card {
       background: var(--panel);
@@ -184,12 +181,7 @@
       gap: 0.7rem 1rem;
     }
 
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.28rem;
-    }
-
+    .field { display: flex; flex-direction: column; gap: 0.28rem; }
     .field.full { grid-column: 1 / -1; }
 
     .field label {
@@ -296,7 +288,7 @@
 
     .gl.on { fill: rgba(14,9,4,0.72); }
 
-    /* ── Context note (exam date / week) ── */
+    /* ── Context note ── */
     .ctx-note {
       font-family: 'Zen Kaku Gothic Antique', sans-serif;
       font-size: 0.74rem;
@@ -379,38 +371,147 @@
       text-align: center;
     }
 
+    .logout-btn {
+      background: transparent;
+      border: none;
+      color: rgba(154,122,80,0.28);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.66rem;
+      letter-spacing: 0.14em;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.3s;
+    }
+
+    .logout-btn:hover { color: var(--muted); }
+
+    /* ══ AUTH OVERLAY ════════════════════════════ */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 100% 45% at 50% -2%, rgba(80,52,20,0.45) 0%, transparent 100%),
+        radial-gradient(ellipse  60% 30% at 50% 100%, rgba(20,12,5,0.6)  0%, transparent 80%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      z-index: 200;
+    }
+
+    .auth-box {
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.4rem;
+    }
+
+    .auth-desc {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.9;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .auth-email-input {
+      background: rgba(15,10,5,0.55);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 16px;
+      padding: 0.62rem 1.1rem;
+      border-radius: 4px;
+      outline: none;
+      width: 100%;
+      text-align: center;
+      transition: border-color 0.3s;
+      letter-spacing: 0.03em;
+    }
+
+    .auth-email-input:focus { border-color: rgba(200,160,64,0.48); }
+    .auth-email-input::placeholder { color: var(--muted); opacity: 0.45; }
+
+    .auth-submit-btn {
+      background: rgba(200,160,64,0.12);
+      border: 1px solid rgba(200,160,64,0.35);
+      color: var(--gold);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.78rem;
+      padding: 0.5rem 2rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.12em;
+      transition: all 0.35s;
+    }
+
+    .auth-submit-btn:hover:not(:disabled) { background: rgba(200,160,64,0.2); }
+    .auth-submit-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .auth-sent-msg {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 2;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-sent-msg strong { color: rgba(200,160,64,0.75); font-weight: 400; }
+
+    /* ══ LOADING ══════════════════════════════════ */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-txt {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.25em;
+      opacity: 0.6;
+    }
+
     /* ══════════════════════════════════════════════
        RESPONSIVE
        ══════════════════════════════════════════════ */
 
-    /* タップ品質向上（全サイズ共通） */
     button, [role="button"] {
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
 
-    /* ── スマホ縦  ( ～ 479px ) ─────────────────── */
     @media (max-width: 479px) {
       body {
         padding: 3vh 0.9rem 0;
-        /* ホームバー対応 */
         padding-bottom: max(5vh, env(safe-area-inset-bottom, 5vh));
         min-height: 100dvh;
       }
 
       .app { gap: 1.2rem; }
-
       h1 { font-size: 1.55rem; }
-
       .header-sub { font-size: 0.7rem; }
-
-      /* 設定パネルを1列に */
       .settings-grid { grid-template-columns: 1fr; }
-
-      /* iOS 入力フォームズーム防止（16px必須） */
       .field input { font-size: 16px; padding: 0.52rem 0.65rem; }
 
-      /* 科目タブ — 横スクロール（折り返しなし） */
       .subjects-row {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -418,13 +519,11 @@
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         padding-bottom: 0.1rem;
-        /* 端が見えるよう左右にわずかにパディング */
         padding-left: 0.1rem;
         padding-right: 0.1rem;
       }
       .subjects-row::-webkit-scrollbar { display: none; }
 
-      /* タップしやすいサイズ（44px目安） */
       .sub-tab, .btn-add-sub {
         padding: 0.52rem 1.05rem;
         font-size: 0.78rem;
@@ -432,28 +531,22 @@
       }
 
       .btn-settings { font-size: 1.1rem; padding: 0.35rem 0.45rem; }
-
       .card { padding: 1.15rem 1.25rem; }
       #msg  { font-size: 0.87rem; line-height: 2; }
       .ctx-note { font-size: 0.7rem; }
       .prog     { font-size: 0.72rem; }
     }
 
-    /* ── スマホ横 / 小タブレット  ( 480px ～ 639px ) */
     @media (min-width: 480px) and (max-width: 639px) {
       .app        { max-width: 420px; }
       .window-wrap{ max-width: 300px; }
     }
 
-    /* ── タブレット  ( 640px ～ 859px ) ────────── */
     @media (min-width: 640px) and (max-width: 859px) {
       .app         { max-width: 460px; }
       .window-wrap { max-width: 320px; }
     }
 
-    /* ── デスクトップ 2カラム  ( 860px ～ ) ──────
-       左: ステンドグラス窓（sticky）
-       右: ヘッダー・タブ・設定・メッセージ         */
     @media (min-width: 860px) {
       body {
         padding: 5vh 2.5rem 8vh;
@@ -470,7 +563,6 @@
         align-items: start;
       }
 
-      /* ─ 左カラム: 窓（行1〜7を貫く） ─ */
       .window-wrap {
         grid-column: 1;
         grid-row: 1 / 8;
@@ -480,7 +572,6 @@
         top: 4vh;
       }
 
-      /* 窓の下にコンテキスト情報 */
       .ctx-note {
         grid-column: 1;
         grid-row: 8;
@@ -488,11 +579,7 @@
         padding-top: 0.5rem;
       }
 
-      /* ─ 右カラム ─ */
-      header {
-        grid-column: 2; grid-row: 1;
-        text-align: left;
-      }
+      header { grid-column: 2; grid-row: 1; text-align: left; }
 
       .subjects-row {
         grid-column: 2; grid-row: 2;
@@ -518,12 +605,10 @@
         text-align: left;
       }
 
-      /* デスクトップ用の余白調整 */
       h1   { font-size: 2.1rem; }
       #msg { font-size: 0.95rem; line-height: 2.2; }
     }
 
-    /* ── ワイドデスクトップ  ( 1100px ～ ) ──────── */
     @media (min-width: 1100px) {
       .app {
         max-width: 920px;
@@ -536,7 +621,32 @@
   </style>
 </head>
 <body>
-<div class="app">
+
+<!-- Loading -->
+<div id="loading-overlay" class="loading-overlay">
+  <p class="loading-txt">読み込み中</p>
+</div>
+
+<!-- Auth overlay (shown when not logged in) -->
+<div id="auth-overlay" class="auth-overlay" hidden>
+  <div class="auth-box">
+    <p class="eyebrow">書斎へのかぎ</p>
+    <h1>学習のあかり</h1>
+    <p class="auth-desc">メールアドレスを入力してください。<br>書斎へのリンクをお送りします。</p>
+    <div class="auth-form" id="auth-form">
+      <input type="email" id="auth-email" class="auth-email-input"
+             placeholder="your@email.com" autocomplete="email" inputmode="email">
+      <button id="auth-btn" class="auth-submit-btn">ログインリンクを送る</button>
+    </div>
+    <p id="auth-sent" hidden class="auth-sent-msg">
+      メールをご確認ください。<br>
+      リンクをクリックすると<strong>書斎が開きます</strong>。
+    </p>
+  </div>
+</div>
+
+<!-- Main app (shown after login) -->
+<div class="app" id="main-app" hidden>
 
   <header>
     <p class="eyebrow">私だけの書斎</p>
@@ -544,12 +654,8 @@
     <p class="header-sub">放送大学 · ガラスに触れて、静かに進む</p>
   </header>
 
-  <!-- Subject selector + settings toggle -->
-  <div class="subjects-row" id="subjects-row">
-    <!-- tabs generated by JS -->
-  </div>
+  <div class="subjects-row" id="subjects-row"></div>
 
-  <!-- Settings panel -->
   <div class="settings-wrap" id="settings-wrap">
     <div class="settings-inner">
       <div class="settings-card">
@@ -575,14 +681,7 @@
     </div>
   </div>
 
-  <!-- Stained glass window -->
   <div class="window-wrap">
-    <!--
-      SVG 300×455  Gothic arch clip: M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z
-      Cols: A x=19 w=83 cx=60 | B x=106 w=84 cx=148 | C x=194 w=83 cx=235
-      Rows: 1 y=7  h=72 cy=61(edge) | 2 y=83 | 3 y=159 | 4 y=235 | 5 y=311 (+72 each)
-      Exam: y=387 h=58 full-width
-    -->
     <svg id="win" viewBox="0 0 300 455" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <clipPath id="ac">
@@ -594,10 +693,8 @@
         </linearGradient>
       </defs>
 
-      <!-- Leading -->
       <path d="M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z" fill="#0b0703"/>
 
-      <!-- Panes -->
       <g clip-path="url(#ac)" id="pg">
         <rect class="gp" id="p0"  x="19"  y="7"   width="83" height="72" tabindex="0" role="button" aria-label="第1週"/>
         <rect class="gp" id="p1"  x="106" y="7"   width="84" height="72" tabindex="0" role="button" aria-label="第2週"/>
@@ -617,7 +714,6 @@
         <rect class="gp" id="p15" x="19"  y="387" width="261" height="58" tabindex="0" role="button" aria-label="単位認定試験"/>
       </g>
 
-      <!-- Labels -->
       <g clip-path="url(#ac)" id="lg" pointer-events="none">
         <text class="gl" id="l0"  x="60"  y="61">第1週</text>
         <text class="gl" id="l1"  x="148" y="43">第2週</text>
@@ -637,11 +733,9 @@
         <text class="gl" id="l15" x="149" y="416" font-size="10.5" letter-spacing="0.08em">単位認定試験</text>
       </g>
 
-      <!-- Sheen -->
       <rect clip-path="url(#ac)" x="0" y="0" width="300" height="455"
             fill="url(#sheen)" pointer-events="none"/>
 
-      <!-- Frame -->
       <path d="M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z"
             fill="none" stroke="#0b0703" stroke-width="9"/>
       <path d="M 20 187 Q 20 19 150 10 Q 280 19 280 187 L 280 444 L 20 444 Z"
@@ -649,13 +743,9 @@
     </svg>
   </div>
 
-  <!-- Context: exam date + current week soft hint -->
   <p class="ctx-note" id="ctx"></p>
-
-  <!-- Progress -->
   <p class="prog" id="prog">まだ灯りが待っています</p>
 
-  <!-- Message -->
   <div class="card">
     <span class="card-icon">🕯</span>
     <p id="msg">ようこそ、あなただけの静かな場所へ。
@@ -664,16 +754,93 @@
 
   <button class="reset-btn" id="rst">この科目の灯りをすべて消す</button>
 
-  <footer>あなたのペースが、あなたの正しいペースです</footer>
-</div>
+  <footer>
+    あなたのペースが、あなたの正しいペースです
+    &emsp;<button class="logout-btn" id="logout-btn">ログアウト</button>
+  </footer>
+
+</div><!-- /main-app -->
 
 <script>
 /* ══════════════════════════════════════════════════════════════
-   study haven  —  multi-subject version
+   study haven  —  Supabase版
    ══════════════════════════════════════════════════════════════ */
 
-const STORE = 'naoutani-haven-v2';
+const SUPABASE_URL = 'https://expdnvdwofkvtkztyckk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4cGRudmR3b2ZrdnRrenR5Y2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5ODgwNDYsImV4cCI6MjA5MTU2NDA0Nn0.cBEPGRJ-cgnvecwWTTSvGPl42v8GA4tgpPzO6_qEAMg';
 
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
+/* ── DOM refs ─────────────────────────────── */
+const loadingOverlay = document.getElementById('loading-overlay');
+const authOverlay    = document.getElementById('auth-overlay');
+const mainApp        = document.getElementById('main-app');
+const authEmailEl    = document.getElementById('auth-email');
+const authBtnEl      = document.getElementById('auth-btn');
+const authFormEl     = document.getElementById('auth-form');
+const authSentEl     = document.getElementById('auth-sent');
+const rowEl          = document.getElementById('subjects-row');
+const swEl           = document.getElementById('settings-wrap');
+const fName          = document.getElementById('f-name');
+const fStart         = document.getElementById('f-start');
+const fExam          = document.getElementById('f-exam');
+const progEl         = document.getElementById('prog');
+const ctxEl          = document.getElementById('ctx');
+const msgEl          = document.getElementById('msg');
+const rstBtn         = document.getElementById('rst');
+const panes          = [...document.querySelectorAll('.gp')];
+const labels         = [...document.querySelectorAll('.gl')];
+
+/* ── Auth ──────────────────────────────────── */
+authBtnEl.addEventListener('click', async () => {
+  const email = authEmailEl.value.trim();
+  if (!email) return;
+  authBtnEl.disabled = true;
+  authBtnEl.textContent = '送信中...';
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error) {
+    authBtnEl.disabled = false;
+    authBtnEl.textContent = 'ログインリンクを送る';
+  } else {
+    authFormEl.hidden = true;
+    authSentEl.hidden = false;
+  }
+});
+
+authEmailEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') authBtnEl.click();
+});
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+});
+
+/* ── Auth state ────────────────────────────── */
+sb.auth.onAuthStateChange(async (event, session) => {
+  currentUser = session?.user ?? null;
+  if (currentUser) {
+    await initApp();
+    loadingOverlay.hidden = true;
+    authOverlay.hidden    = true;
+    mainApp.hidden        = false;
+  } else {
+    loadingOverlay.hidden = true;
+    mainApp.hidden        = true;
+    authOverlay.hidden    = false;
+  }
+});
+
+/* ── UUID helper ───────────────────────────── */
+function uid() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+
+/* ── Colors & messages ─────────────────────── */
 const COLORS = [
   '#c86520','#e89a20','#d07020',
   '#e8ac1e','#bf7420','#d88c1a',
@@ -709,53 +876,77 @@ const MSGS = {
   saved:    '設定を保存しました。\n書斎の名前が変わると、また新しい気持ちになれますね。',
 };
 
-/* ── Data helpers ─────────────────────────── */
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-
+/* ── Default subject ────────────────────────── */
 function defaultSubject(name) {
   return { id: uid(), name: name || '科目1', startDate: '', examDate: '', progress: [] };
 }
 
-function load() {
-  try {
-    const s = localStorage.getItem(STORE);
-    if (s) return JSON.parse(s);
-  } catch(_) {}
-  return { subjects: [defaultSubject('科目1')], currentId: null };
+/* ── Supabase data operations ───────────────── */
+async function loadFromSupabase() {
+  const { data, error } = await sb.from('subjects')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('load error:', error);
+    const sub = defaultSubject('科目1');
+    return { subjects: [sub], currentId: sub.id };
+  }
+
+  if (!data || data.length === 0) {
+    const sub = defaultSubject('科目1');
+    await upsertSubject(sub, 0);
+    return { subjects: [sub], currentId: sub.id };
+  }
+
+  const subjects = data.map(row => ({
+    id:        row.id,
+    name:      row.name,
+    startDate: row.start_date || '',
+    examDate:  row.exam_date  || '',
+    progress:  Array.isArray(row.progress) ? row.progress : []
+  }));
+
+  return { subjects, currentId: subjects[0].id };
 }
 
-function save(state) {
-  localStorage.setItem(STORE, JSON.stringify(state));
+async function upsertSubject(sub, order) {
+  if (!currentUser) return;
+  const { error } = await sb.from('subjects').upsert({
+    id:         sub.id,
+    user_id:    currentUser.id,
+    name:       sub.name,
+    start_date: sub.startDate || null,
+    exam_date:  sub.examDate  || null,
+    progress:   sub.progress,
+    sort_order: order
+  });
+  if (error) console.error('upsert error:', error);
+}
+
+async function deleteSubjectRow(id) {
+  if (!currentUser) return;
+  const { error } = await sb.from('subjects').delete()
+    .eq('id', id).eq('user_id', currentUser.id);
+  if (error) console.error('delete error:', error);
 }
 
 /* ── State ────────────────────────────────── */
-let state = load();
-if (!state.subjects.length) state.subjects.push(defaultSubject('科目1'));
-if (!state.currentId || !state.subjects.find(s => s.id === state.currentId)) {
-  state.currentId = state.subjects[0].id;
-}
-
-function current() { return state.subjects.find(s => s.id === state.currentId); }
-function litSet()   { return new Set(current().progress); }
-
-/* ── DOM refs ─────────────────────────────── */
-const rowEl  = document.getElementById('subjects-row');
-const swEl   = document.getElementById('settings-wrap');
-const fName  = document.getElementById('f-name');
-const fStart = document.getElementById('f-start');
-const fExam  = document.getElementById('f-exam');
-const progEl = document.getElementById('prog');
-const ctxEl  = document.getElementById('ctx');
-const msgEl  = document.getElementById('msg');
-const rstBtn = document.getElementById('rst');
-
-const panes  = [...document.querySelectorAll('.gp')];
-const labels = [...document.querySelectorAll('.gl')];
-
+let state = { subjects: [], currentId: null };
 let settingsOpen = false;
 let msgTimer = null;
 
-/* ── Render subjects bar ─────────────────── */
+function current() { return state.subjects.find(s => s.id === state.currentId); }
+
+function save() {
+  if (!currentUser) return;
+  const sub   = current();
+  const order = state.subjects.findIndex(s => s.id === sub.id);
+  upsertSubject(sub, order);
+}
+
+/* ── Subjects bar ─────────────────────────── */
 function renderSubjectsBar() {
   rowEl.innerHTML = '';
 
@@ -787,7 +978,7 @@ function renderSubjectsBar() {
 function toggleSettings() {
   settingsOpen = !settingsOpen;
   swEl.classList.toggle('open', settingsOpen);
-  renderSubjectsBar(); // refresh btn state
+  renderSubjectsBar();
 
   if (settingsOpen) {
     const sub = current();
@@ -798,11 +989,11 @@ function toggleSettings() {
 }
 
 document.getElementById('btn-save').addEventListener('click', () => {
-  const sub = current();
+  const sub     = current();
   sub.name      = fName.value.trim() || '科目';
   sub.startDate = fStart.value;
   sub.examDate  = fExam.value;
-  save(state);
+  save();
   renderSubjectsBar();
   updateContext();
   showMsg('saved');
@@ -810,15 +1001,19 @@ document.getElementById('btn-save').addEventListener('click', () => {
 
 document.getElementById('btn-del').addEventListener('click', () => {
   if (state.subjects.length <= 1) {
-    // Reset instead of delete when only one subject
-    current().name = '科目1';
-    current().startDate = '';
-    current().examDate = '';
-    current().progress = [];
-    fName.value = '科目1';
+    const sub = current();
+    const deletedId = sub.id;
+    sub.id        = uid();
+    sub.name      = '科目1';
+    sub.startDate = '';
+    sub.examDate  = '';
+    sub.progress  = [];
+    fName.value  = '科目1';
     fStart.value = '';
-    fExam.value = '';
-    save(state);
+    fExam.value  = '';
+    deleteSubjectRow(deletedId);
+    upsertSubject(sub, 0);
+    state.currentId = sub.id;
     renderWindow();
     renderSubjectsBar();
     updateContext();
@@ -826,10 +1021,11 @@ document.getElementById('btn-del').addEventListener('click', () => {
     showMsg('reset');
     return;
   }
-  const idx = state.subjects.findIndex(s => s.id === state.currentId);
+  const idx       = state.subjects.findIndex(s => s.id === state.currentId);
+  const deletedId = state.currentId;
   state.subjects.splice(idx, 1);
   state.currentId = state.subjects[Math.max(0, idx - 1)].id;
-  save(state);
+  deleteSubjectRow(deletedId);
   settingsOpen = false;
   swEl.classList.remove('open');
   renderSubjectsBar();
@@ -844,7 +1040,7 @@ function addSubject() {
   const sub = defaultSubject(`科目${state.subjects.length + 1}`);
   state.subjects.push(sub);
   state.currentId = sub.id;
-  save(state);
+  upsertSubject(sub, state.subjects.length - 1);
   settingsOpen = true;
   swEl.classList.add('open');
   fName.value  = sub.name;
@@ -866,7 +1062,6 @@ function switchSubject(id) {
     fStart.value = sub.startDate || '';
     fExam.value  = sub.examDate  || '';
   }
-  save(state);
   renderSubjectsBar();
   renderWindow();
   updateContext();
@@ -890,14 +1085,14 @@ function dimDown(i, sub) {
 }
 
 function renderWindow() {
-  const sub = current();
-  const litArr = new Set(sub.progress);
+  const sub    = current();
+  const litSet = new Set(sub.progress);
   panes.forEach((p, i) => {
     p.style.fill = '';
     p.classList.remove('lit');
     labels[i].classList.remove('on');
   });
-  litArr.forEach(i => {
+  litSet.forEach(i => {
     if (i >= 0 && i < panes.length) {
       panes[i].style.fill = COLORS[i];
       panes[i].classList.add('lit');
@@ -906,22 +1101,22 @@ function renderWindow() {
   });
 }
 
-/* ── Context note (exam date + week hint) ── */
+/* ── Context note ────────────────────────── */
 function updateContext() {
-  const sub = current();
+  const sub   = current();
   const lines = [];
 
   if (sub.examDate) {
-    const d = new Date(sub.examDate);
-    const m = d.getMonth() + 1;
+    const d   = new Date(sub.examDate);
+    const m   = d.getMonth() + 1;
     const day = d.getDate();
     const dow = ['日','月','火','水','木','金','土'][d.getDay()];
     lines.push(`試験の目安 <strong>${m}月${day}日（${dow}）</strong>`);
   }
 
   if (sub.startDate) {
-    const start = new Date(sub.startDate);
-    const today = new Date();
+    const start   = new Date(sub.startDate);
+    const today   = new Date();
     const diffDays = Math.floor((today - start) / 86400000);
     const weekNum  = Math.floor(diffDays / 7) + 1;
     if (weekNum >= 1 && weekNum <= 15) {
@@ -960,14 +1155,14 @@ function pickMsg(event) {
   const weeks = [...lit].filter(i => i < 15).length;
   const total = lit.size;
 
-  if (event === 'saved')  return MSGS.saved;
-  if (event === 'reset')  return MSGS.reset;
-  if (event === 'dim')    return rand(MSGS.dim);
+  if (event === 'saved') return MSGS.saved;
+  if (event === 'reset') return MSGS.reset;
+  if (event === 'dim')   return rand(MSGS.dim);
 
-  if (total === 16)       return MSGS.all;
-  if (weeks === 15)       return MSGS.weeksDone;
-  if (weeks >= 10)        return MSGS.near;
-  if (weeks >= 8)         return MSGS.half;
+  if (total === 16) return MSGS.all;
+  if (weeks === 15) return MSGS.weeksDone;
+  if (weeks >= 10)  return MSGS.near;
+  if (weeks >= 8)   return MSGS.half;
 
   return Math.random() < 0.28 ? rand(MSGS.gentle) : rand(MSGS.lit);
 }
@@ -983,11 +1178,11 @@ function showMsg(event) {
 
 /* ── Toggle pane ─────────────────────────── */
 function togglePane(i) {
-  const sub = current();
+  const sub   = current();
   const wasLit = sub.progress.includes(i);
   if (wasLit) { dimDown(i, sub); showMsg('dim'); }
   else        { lightUp(i, sub); showMsg('lit'); }
-  save(state);
+  save();
   updateProg();
 }
 
@@ -1004,16 +1199,23 @@ rstBtn.addEventListener('click', () => {
   if (!sub.progress.length) return;
   sub.progress.forEach(i => dimDown(i, sub));
   sub.progress = [];
-  save(state);
+  save();
   updateProg();
   showMsg('reset');
 });
 
-/* ── Boot ────────────────────────────────── */
-renderSubjectsBar();
-renderWindow();
-updateContext();
-updateProg();
+/* ── Init ─────────────────────────────────── */
+async function initApp() {
+  state = await loadFromSupabase();
+  if (!state.subjects.length) state.subjects.push(defaultSubject('科目1'));
+  if (!state.currentId || !state.subjects.find(s => s.id === state.currentId)) {
+    state.currentId = state.subjects[0].id;
+  }
+  renderSubjectsBar();
+  renderWindow();
+  updateContext();
+  updateProg();
+}
 </script>
 </body>
 </html>
