@@ -831,7 +831,6 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   const tokenType  = urlParams.get('type');
 
   if (tokenHash && tokenType) {
-    // URLをきれいにしてからverify（リロードでも再実行されないよう）
     window.history.replaceState({}, '', window.location.pathname);
     const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: tokenType });
     if (data?.session?.user) {
@@ -842,6 +841,12 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
       mainApp.hidden        = false;
       return;
     }
+    // エラー内容を表示（デバッグ用）
+    loadingOverlay.hidden = true;
+    authOverlay.hidden    = false;
+    authSentEl.hidden     = false;
+    authSentEl.innerHTML  = 'エラー: ' + (error?.message || 'セッションが取得できませんでした') + '<br><small>token_hash: ' + tokenHash.slice(0,8) + '...</small>';
+    return;
   }
 
   // ② すでにセッションがある場合（ログイン済み）
