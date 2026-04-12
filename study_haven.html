@@ -632,7 +632,7 @@
   <div class="auth-box">
     <p class="eyebrow">書斎へのかぎ</p>
     <h1>学習のあかり</h1>
-    <p class="auth-desc" id="auth-desc">メールアドレスを入力してください。<br>6桁のログインコードをお送りします。</p>
+    <p class="auth-desc" id="auth-desc">メールアドレスを入力してください。<br>ログインコードをお送りします。</p>
     <div class="auth-form" id="auth-form">
       <input type="email" id="auth-email" class="auth-email-input"
              placeholder="your@email.com" autocomplete="email" inputmode="email">
@@ -834,7 +834,7 @@ authCodeBtnEl.addEventListener('click', async () => {
   if (!code || !pendingEmail) return;
   authCodeBtnEl.disabled = true;
   authCodeBtnEl.textContent = '確認中...';
-  const { data, error } = await sb.auth.verifyOtp({
+  const { error } = await sb.auth.verifyOtp({
     email: pendingEmail,
     token: code,
     type: 'email'
@@ -843,12 +843,9 @@ authCodeBtnEl.addEventListener('click', async () => {
     authCodeBtnEl.disabled = false;
     authCodeBtnEl.textContent = 'ログイン';
     authSentEl.innerHTML = 'コードが違います。もう一度確認してください。<br><small>' + error.message + '</small>';
-  } else if (data?.session?.user) {
-    currentUser = data.session.user;
-    await initApp();
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = true;
-    mainApp.hidden        = false;
+  } else {
+    // 成功 → onAuthStateChange が SIGNED_IN を検知して書斎を開く
+    authSentEl.innerHTML = '確認できました。書斎を開いています...';
   }
 });
 
