@@ -769,7 +769,9 @@
 const SUPABASE_URL = 'https://expdnvdwofkvtkztyckk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4cGRudmR3b2ZrdnRrenR5Y2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5ODgwNDYsImV4cCI6MjA5MTU2NDA0Nn0.cBEPGRJ-cgnvecwWTTSvGPl42v8GA4tgpPzO6_qEAMg';
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { flowType: 'implicit', detectSessionInUrl: true }
+});
 let currentUser = null;
 
 /* ── DOM refs ─────────────────────────────── */
