@@ -680,7 +680,7 @@
         <div class="settings-actions">
           <button class="btn-save" id="btn-save">保存する</button>
           <button class="btn-del" id="btn-del">この科目を削除</button>
-          <button class="btn-del" id="logout-btn" style="margin-left:0; border-color:rgba(154,122,80,0.12);">ログアウト</button>
+          <button class="btn-del" id="logout-btn" style="margin-left:0; border-color:rgba(154,122,80,0.12);">書斎を出る</button>
         </div>
       </div>
     </div>
@@ -1155,6 +1155,12 @@ function switchSubject(id) {
     fStart.value = sub.startDate || '';
     fExam.value  = sub.examDate  || '';
   }
+  // リセット確認状態をクリア
+  if (rstConfirm) {
+    clearTimeout(rstTimer);
+    rstConfirm = false;
+    rstBtn.textContent = 'この科目の灯りをすべて消す';
+  }
   renderSubjectsBar();
   renderWindow();
   updateContext();
@@ -1200,7 +1206,8 @@ function updateContext() {
   const lines = [];
 
   if (sub.examDate) {
-    const d   = new Date(sub.examDate);
+    const [ey, em, ed] = sub.examDate.split('-').map(Number);
+    const d   = new Date(ey, em - 1, ed);
     const m   = d.getMonth() + 1;
     const day = d.getDate();
     const dow = ['日','月','火','水','木','金','土'][d.getDay()];
@@ -1208,8 +1215,9 @@ function updateContext() {
   }
 
   if (sub.startDate) {
-    const start   = new Date(sub.startDate);
-    const today   = new Date();
+    const [sy, sm, sd] = sub.startDate.split('-').map(Number);
+    const start    = new Date(sy, sm - 1, sd);
+    const today    = new Date();
     const diffDays = Math.floor((today - start) / 86400000);
     const weekNum  = Math.floor(diffDays / 7) + 1;
     if (weekNum >= 1 && weekNum <= 15) {
@@ -1234,7 +1242,7 @@ function updateProg() {
     progEl.innerHTML = '<strong>学習の旅、完結</strong>';
   } else {
     let t = `<strong>${weeks}</strong>&thinsp;/&thinsp;15週 完了`;
-    if (exam) t += '　試験 <strong>✓</strong>';
+    if (exam) t += '　試験 <strong>済</strong>';
     progEl.innerHTML = t;
   }
 }
