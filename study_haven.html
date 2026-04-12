@@ -823,8 +823,28 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 
 /* ── Auth state ────────────────────────────── */
 
-// ページ読み込み時にセッションを確認（マジックリンク対応）
+// ページ読み込み時にセッションを確認
 (async () => {
+  // ① URL に token_hash がある場合（新テンプレート方式）
+  const urlParams  = new URLSearchParams(window.location.search);
+  const tokenHash  = urlParams.get('token_hash');
+  const tokenType  = urlParams.get('type');
+
+  if (tokenHash && tokenType) {
+    // URLをきれいにしてからverify（リロードでも再実行されないよう）
+    window.history.replaceState({}, '', window.location.pathname);
+    const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: tokenType });
+    if (data?.session?.user) {
+      currentUser = data.session.user;
+      await initApp();
+      loadingOverlay.hidden = true;
+      authOverlay.hidden    = true;
+      mainApp.hidden        = false;
+      return;
+    }
+  }
+
+  // ② すでにセッションがある場合（ログイン済み）
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     currentUser = session.user;
