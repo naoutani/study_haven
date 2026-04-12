@@ -334,7 +334,7 @@
       background: linear-gradient(90deg,transparent,rgba(200,160,64,0.22),transparent);
     }
 
-    .card-icon { display:block; font-size:1rem; margin-bottom:0.7rem; opacity:0.65; }
+    .card-icon { display:none; }
 
     #msg {
       font-size: 0.9rem;
@@ -640,9 +640,10 @@
     </div>
     <div class="auth-form" id="auth-code-form" hidden>
       <input type="text" id="auth-code" class="auth-email-input"
-             placeholder="123456" inputmode="numeric" maxlength="8"
+             placeholder="コードを入力" inputmode="numeric" maxlength="8"
              autocomplete="one-time-code" style="letter-spacing:0.4em; text-align:center;">
       <button id="auth-code-btn" class="auth-submit-btn">ログイン</button>
+      <button id="auth-back-btn" class="auth-submit-btn" style="background:transparent; border-color:rgba(154,122,80,0.25); color:var(--muted); font-size:0.7rem;">メールアドレスを変更する</button>
     </div>
     <p id="auth-sent" hidden class="auth-sent-msg"></p>
   </div>
@@ -679,6 +680,7 @@
         <div class="settings-actions">
           <button class="btn-save" id="btn-save">保存する</button>
           <button class="btn-del" id="btn-del">この科目を削除</button>
+          <button class="btn-del" id="logout-btn" style="margin-left:0; border-color:rgba(154,122,80,0.12);">ログアウト</button>
         </div>
       </div>
     </div>
@@ -750,17 +752,13 @@
   <p class="prog" id="prog">まだ灯りが待っています</p>
 
   <div class="card">
-    <span class="card-icon">🕯</span>
     <p id="msg">ようこそ、あなただけの静かな場所へ。
 ガラスのピースに触れるだけでいい。急ぐ必要は、ここにはありません。</p>
   </div>
 
   <button class="reset-btn" id="rst">この科目の灯りをすべて消す</button>
 
-  <footer>
-    あなたのペースが、あなたの正しいペースです
-    &emsp;<button class="logout-btn" id="logout-btn">ログアウト</button>
-  </footer>
+  <footer>あなたのペースが、あなたの正しいペースです</footer>
 
 </div><!-- /main-app -->
 
@@ -787,6 +785,7 @@ const authFormEl     = document.getElementById('auth-form');
 const authCodeFormEl = document.getElementById('auth-code-form');
 const authCodeEl     = document.getElementById('auth-code');
 const authCodeBtnEl  = document.getElementById('auth-code-btn');
+const authBackBtnEl  = document.getElementById('auth-back-btn');
 const authSentEl     = document.getElementById('auth-sent');
 const rowEl          = document.getElementById('subjects-row');
 const swEl           = document.getElementById('settings-wrap');
@@ -802,6 +801,27 @@ const labels         = [...document.querySelectorAll('.gl')];
 
 let pendingEmail = '';
 
+function authErrMsg(msg) {
+  if (!msg) return 'エラーが発生しました。もう一度お試しください。';
+  if (msg.includes('rate limit') || msg.includes('too many'))
+    return 'しばらく時間をおいてから、もう一度お試しください。';
+  if (msg.includes('invalid') || msg.includes('expired'))
+    return 'コードが違うか、期限が切れています。メールを再送してください。';
+  if (msg.includes('email'))
+    return '正しいメールアドレスを入力してください。';
+  return 'エラーが発生しました。もう一度お試しください。';
+}
+
+function resetAuthForm() {
+  authFormEl.hidden     = false;
+  authCodeFormEl.hidden = true;
+  authSentEl.hidden     = true;
+  authBtnEl.disabled    = false;
+  authBtnEl.textContent = 'コードを送る';
+  authCodeEl.value      = '';
+  pendingEmail          = '';
+}
+
 /* ── Auth: ① メール送信 ──────────────────── */
 authBtnEl.addEventListener('click', async () => {
   const email = authEmailEl.value.trim();
@@ -813,16 +833,19 @@ authBtnEl.addEventListener('click', async () => {
     authBtnEl.disabled = false;
     authBtnEl.textContent = 'コードを送る';
     authSentEl.hidden = false;
-    authSentEl.textContent = 'エラー: ' + error.message;
+    authSentEl.textContent = authErrMsg(error.message);
   } else {
     pendingEmail = email;
     authFormEl.hidden     = true;
     authCodeFormEl.hidden = false;
     authSentEl.hidden     = false;
-    authSentEl.innerHTML  = 'メールに届いた<strong>6桁のコード</strong>を入力してください。';
+    authSentEl.innerHTML  = 'メールに届いたコードを入力してください。';
     authCodeEl.focus();
   }
 });
+
+/* ── Auth: 戻るボタン ──────────────────────── */
+authBackBtnEl.addEventListener('click', resetAuthForm);
 
 authEmailEl.addEventListener('keydown', e => {
   if (e.key === 'Enter') authBtnEl.click();
@@ -842,7 +865,7 @@ authCodeBtnEl.addEventListener('click', async () => {
   if (error) {
     authCodeBtnEl.disabled = false;
     authCodeBtnEl.textContent = 'ログイン';
-    authSentEl.innerHTML = 'コードが違います。もう一度確認してください。<br><small>' + error.message + '</small>';
+    authSentEl.innerHTML = authErrMsg(error.message);
   } else {
     // 成功 → onAuthStateChange が SIGNED_IN を検知して書斎を開く
     authSentEl.innerHTML = '確認できました。書斎を開いています...';
@@ -859,9 +882,18 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 
 /* ── Auth state ────────────────────────────── */
 
+// ローディングタイムアウト（8秒経っても応答なければログイン画面へ）
+const loadingTimeout = setTimeout(() => {
+  if (!loadingOverlay.hidden) {
+    loadingOverlay.hidden = true;
+    authOverlay.hidden    = false;
+  }
+}, 8000);
+
 // ページ読み込み時にセッションを確認（ログイン済みの場合）
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
+  clearTimeout(loadingTimeout);
   if (session?.user) {
     currentUser = session.user;
     await initApp();
@@ -996,11 +1028,15 @@ let msgTimer = null;
 
 function current() { return state.subjects.find(s => s.id === state.currentId); }
 
+let saveTimer = null;
 function save() {
   if (!currentUser) return;
-  const sub   = current();
-  const order = state.subjects.findIndex(s => s.id === sub.id);
-  upsertSubject(sub, order);
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const sub   = current();
+    const order = state.subjects.findIndex(s => s.id === sub.id);
+    upsertSubject(sub, order);
+  }, 600);
 }
 
 /* ── Subjects bar ─────────────────────────── */
@@ -1025,7 +1061,7 @@ function renderSubjectsBar() {
   const settingsBtn = document.createElement('button');
   settingsBtn.className = 'btn-settings' + (settingsOpen ? ' active' : '');
   settingsBtn.id = 'btn-settings';
-  settingsBtn.textContent = '⚙';
+  settingsBtn.textContent = '設定';
   settingsBtn.title = '設定';
   settingsBtn.addEventListener('click', toggleSettings);
   rowEl.appendChild(settingsBtn);
@@ -1251,9 +1287,23 @@ panes.forEach((p, i) => {
   });
 });
 
+let rstConfirm = false;
+let rstTimer   = null;
 rstBtn.addEventListener('click', () => {
   const sub = current();
   if (!sub.progress.length) return;
+  if (!rstConfirm) {
+    rstConfirm = true;
+    rstBtn.textContent = 'もう一度押すと消えます';
+    rstTimer = setTimeout(() => {
+      rstConfirm = false;
+      rstBtn.textContent = 'この科目の灯りをすべて消す';
+    }, 3000);
+    return;
+  }
+  clearTimeout(rstTimer);
+  rstConfirm = false;
+  rstBtn.textContent = 'この科目の灯りをすべて消す';
   sub.progress.forEach(i => dimDown(i, sub));
   sub.progress = [];
   save();
