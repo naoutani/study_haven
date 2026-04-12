@@ -1,0 +1,19 @@
+# このファイルに書いたものはVercelに公開しない（.gitignoreと同じ仕組み）
+
+# 個人ノート
+jibunshi.md
+personal_philosophy.md
+CLAUDE.md
+
+# データ・ログ
+log/
+export_*.csv
+
+# 他のプロジェクト
+whispr/
+
+# 画像ファイル
+*.png
+
+# Claude設定
+.claude/

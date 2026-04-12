@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>私だけの書斎 — 学習のあかり</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Zen+Kaku+Gothic+Antique:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* 横スクロール防止 */
+    html, body { overflow-x: hidden; }
+
+    :root {
+      --bg:       #17100a;
+      --panel:    rgba(42, 28, 14, 0.60);
+      --text:     #f0e4cc;
+      --muted:    #9a7a50;
+      --gold:     #c8a040;
+      --leading:  #0c0805;
+      --glass-off:#1d1610;
+      --border:   rgba(154,122,80,0.20);
+    }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 100% 45% at 50% -2%, rgba(80,52,20,0.45) 0%, transparent 100%),
+        radial-gradient(ellipse  60% 30% at 50% 100%, rgba(20,12,5,0.6)  0%, transparent 80%);
+      color: var(--text);
+      font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      padding: 4vh 1.2rem 8vh;
+      /* iPhone ノッチ・ホームバー対応 */
+      padding-left:  max(1.2rem, env(safe-area-inset-left));
+      padding-right: max(1.2rem, env(safe-area-inset-right));
+      padding-bottom: max(8vh, env(safe-area-inset-bottom));
+    }
+
+    .app {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.6rem;
+    }
+
+    /* ── Header ─────────────────────────── */
+    header { text-align: center; }
+
+    .eyebrow {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.4em;
+      color: var(--muted);
+      margin-bottom: 0.9rem;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 400;
+      color: var(--gold);
+      letter-spacing: 0.18em;
+      margin-bottom: 0.45rem;
+    }
+
+    .header-sub {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.07em;
+    }
+
+    /* ── Subject tabs row ───────────────── */
+    .subjects-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .sub-tab {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.72rem;
+      padding: 0.28rem 0.85rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.35s ease;
+      white-space: nowrap;
+    }
+
+    .sub-tab:hover { border-color: rgba(200,160,64,0.35); color: var(--text); }
+
+    .sub-tab.active {
+      background: rgba(200,160,64,0.10);
+      border-color: rgba(200,160,64,0.45);
+      color: var(--gold);
+    }
+
+    .btn-add-sub {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.72rem;
+      padding: 0.28rem 0.7rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.35s ease;
+    }
+
+    .btn-add-sub:hover { border-color: rgba(200,160,64,0.35); color: var(--text); }
+
+    .btn-settings {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 0.2rem 0.3rem;
+      opacity: 0.55;
+      transition: opacity 0.3s, color 0.3s;
+      line-height: 1;
+    }
+
+    .btn-settings:hover  { opacity: 1; }
+    .btn-settings.active { color: var(--gold); opacity: 0.9; }
+
+    /* ── Settings panel (grid-row trick) ── */
+    .settings-wrap {
+      width: 100%;
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows 0.55s ease, opacity 0.5s ease;
+    }
+
+    .settings-wrap.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    .settings-inner {
+      overflow: hidden;
+    }
+
+    .settings-card {
+      background: var(--panel);
+      border: 1px solid rgba(200,160,64,0.10);
+      border-radius: 6px;
+      padding: 1.3rem 1.5rem 1.4rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .settings-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 1.2rem; right: 1.2rem;
+      height: 1px;
+      background: linear-gradient(90deg,transparent,rgba(200,160,64,0.20),transparent);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem 1rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    .field label {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .field input {
+      background: rgba(15,10,5,0.55);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Shippori Mincho', serif;
+      font-size: 0.88rem;
+      padding: 0.38rem 0.6rem;
+      border-radius: 4px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.3s;
+    }
+
+    .field input:focus { border-color: rgba(200,160,64,0.48); }
+
+    .field input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6) sepia(0.8) saturate(0.6);
+      cursor: pointer;
+      opacity: 0.55;
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-save {
+      background: rgba(200,160,64,0.12);
+      border: 1px solid rgba(200,160,64,0.35);
+      color: var(--gold);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.72rem;
+      padding: 0.32rem 1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.35s;
+    }
+
+    .btn-save:hover { background: rgba(200,160,64,0.2); }
+
+    .btn-del {
+      background: transparent;
+      border: 1px solid rgba(154,122,80,0.15);
+      color: var(--muted);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.68rem;
+      padding: 0.32rem 0.8rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.35s;
+      margin-left: auto;
+    }
+
+    .btn-del:hover { border-color: rgba(200,120,64,0.4); color: #c89060; }
+
+    /* ── Window ─────────────────────────── */
+    .window-wrap {
+      width: 100%;
+      max-width: 300px;
+      filter: drop-shadow(0 12px 48px rgba(0,0,0,0.75));
+    }
+
+    .window-wrap svg { width: 100%; height: auto; display: block; }
+
+    .gp {
+      fill: var(--glass-off);
+      cursor: pointer;
+      transition: fill 1.4s ease, filter 1.6s ease;
+      outline: none;
+    }
+
+    .gp:hover:not(.lit) { fill: #2a2016; transition: fill 0.22s ease; }
+
+    @keyframes breathe {
+      0%,100% { filter: drop-shadow(0 0  7px rgba(240,158,38,0.52)) drop-shadow(0 0  3px rgba(255,210,110,0.30)); }
+      50%      { filter: drop-shadow(0 0 13px rgba(240,158,38,0.78)) drop-shadow(0 0  7px rgba(255,210,110,0.50)); }
+    }
+
+    .gp.lit { animation: breathe 4.5s ease-in-out infinite; }
+
+    .gl {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 9.5px;
+      fill: rgba(240,228,204,0.28);
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+      letter-spacing: 0.04em;
+      transition: fill 1.1s ease;
+    }
+
+    .gl.on { fill: rgba(14,9,4,0.72); }
+
+    /* ── Context note (exam date / week) ── */
+    .ctx-note {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.74rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.07em;
+      line-height: 1.8;
+      min-height: 1.4rem;
+      transition: opacity 0.6s ease;
+    }
+
+    .ctx-note strong { color: rgba(200,160,64,0.75); font-weight: 400; }
+
+    /* ── Progress ───────────────────────── */
+    .prog {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.06em;
+      min-height: 1.2rem;
+    }
+
+    .prog strong { color: var(--gold); font-weight: 400; }
+
+    /* ── Message card ───────────────────── */
+    .card {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid rgba(200,160,64,0.10);
+      border-radius: 6px;
+      padding: 1.5rem 1.7rem;
+      position: relative;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 1.4rem; right: 1.4rem;
+      height: 1px;
+      background: linear-gradient(90deg,transparent,rgba(200,160,64,0.22),transparent);
+    }
+
+    .card-icon { display:block; font-size:1rem; margin-bottom:0.7rem; opacity:0.65; }
+
+    #msg {
+      font-size: 0.9rem;
+      line-height: 2.1;
+      color: var(--text);
+      white-space: pre-line;
+      transition: opacity 0.55s ease;
+    }
+
+    #msg.fade { opacity: 0; }
+
+    /* ── Reset ──────────────────────────── */
+    .reset-btn {
+      background: transparent;
+      border: 1px solid rgba(154,122,80,0.18);
+      color: var(--muted);
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.7rem;
+      padding: 0.32rem 1.1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: border-color 0.4s, color 0.4s;
+    }
+
+    .reset-btn:hover { border-color: rgba(154,122,80,0.5); color: var(--text); }
+
+    /* ── Footer ─────────────────────────── */
+    footer {
+      font-family: 'Zen Kaku Gothic Antique', sans-serif;
+      font-size: 0.66rem;
+      letter-spacing: 0.14em;
+      color: rgba(154,122,80,0.28);
+      text-align: center;
+    }
+
+    /* ══════════════════════════════════════════════
+       RESPONSIVE
+       ══════════════════════════════════════════════ */
+
+    /* タップ品質向上（全サイズ共通） */
+    button, [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* ── スマホ縦  ( ～ 479px ) ─────────────────── */
+    @media (max-width: 479px) {
+      body {
+        padding: 3vh 0.9rem 0;
+        /* ホームバー対応 */
+        padding-bottom: max(5vh, env(safe-area-inset-bottom, 5vh));
+        min-height: 100dvh;
+      }
+
+      .app { gap: 1.2rem; }
+
+      h1 { font-size: 1.55rem; }
+
+      .header-sub { font-size: 0.7rem; }
+
+      /* 設定パネルを1列に */
+      .settings-grid { grid-template-columns: 1fr; }
+
+      /* iOS 入力フォームズーム防止（16px必須） */
+      .field input { font-size: 16px; padding: 0.52rem 0.65rem; }
+
+      /* 科目タブ — 横スクロール（折り返しなし） */
+      .subjects-row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 0.1rem;
+        /* 端が見えるよう左右にわずかにパディング */
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
+      }
+      .subjects-row::-webkit-scrollbar { display: none; }
+
+      /* タップしやすいサイズ（44px目安） */
+      .sub-tab, .btn-add-sub {
+        padding: 0.52rem 1.05rem;
+        font-size: 0.78rem;
+        flex-shrink: 0;
+      }
+
+      .btn-settings { font-size: 1.1rem; padding: 0.35rem 0.45rem; }
+
+      .card { padding: 1.15rem 1.25rem; }
+      #msg  { font-size: 0.87rem; line-height: 2; }
+      .ctx-note { font-size: 0.7rem; }
+      .prog     { font-size: 0.72rem; }
+    }
+
+    /* ── スマホ横 / 小タブレット  ( 480px ～ 639px ) */
+    @media (min-width: 480px) and (max-width: 639px) {
+      .app        { max-width: 420px; }
+      .window-wrap{ max-width: 300px; }
+    }
+
+    /* ── タブレット  ( 640px ～ 859px ) ────────── */
+    @media (min-width: 640px) and (max-width: 859px) {
+      .app         { max-width: 460px; }
+      .window-wrap { max-width: 320px; }
+    }
+
+    /* ── デスクトップ 2カラム  ( 860px ～ ) ──────
+       左: ステンドグラス窓（sticky）
+       右: ヘッダー・タブ・設定・メッセージ         */
+    @media (min-width: 860px) {
+      body {
+        padding: 5vh 2.5rem 8vh;
+        align-items: flex-start;
+      }
+
+      .app {
+        max-width: 820px;
+        display: grid;
+        grid-template-columns: 290px 1fr;
+        grid-template-rows: repeat(7, auto) 1fr;
+        column-gap: 3.2rem;
+        row-gap: 1.5rem;
+        align-items: start;
+      }
+
+      /* ─ 左カラム: 窓（行1〜7を貫く） ─ */
+      .window-wrap {
+        grid-column: 1;
+        grid-row: 1 / 8;
+        max-width: 290px;
+        align-self: start;
+        position: sticky;
+        top: 4vh;
+      }
+
+      /* 窓の下にコンテキスト情報 */
+      .ctx-note {
+        grid-column: 1;
+        grid-row: 8;
+        text-align: left;
+        padding-top: 0.5rem;
+      }
+
+      /* ─ 右カラム ─ */
+      header {
+        grid-column: 2; grid-row: 1;
+        text-align: left;
+      }
+
+      .subjects-row {
+        grid-column: 2; grid-row: 2;
+        justify-content: flex-start;
+      }
+
+      .settings-wrap { grid-column: 2; grid-row: 3; }
+
+      .prog {
+        grid-column: 2; grid-row: 4;
+        text-align: left;
+      }
+
+      .card  { grid-column: 2; grid-row: 5; }
+
+      .reset-btn {
+        grid-column: 2; grid-row: 6;
+        align-self: start;
+      }
+
+      footer {
+        grid-column: 2; grid-row: 7;
+        text-align: left;
+      }
+
+      /* デスクトップ用の余白調整 */
+      h1   { font-size: 2.1rem; }
+      #msg { font-size: 0.95rem; line-height: 2.2; }
+    }
+
+    /* ── ワイドデスクトップ  ( 1100px ～ ) ──────── */
+    @media (min-width: 1100px) {
+      .app {
+        max-width: 920px;
+        grid-template-columns: 320px 1fr;
+        column-gap: 4rem;
+      }
+
+      .window-wrap { max-width: 320px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <p class="eyebrow">私だけの書斎</p>
+    <h1>学習のあかり</h1>
+    <p class="header-sub">放送大学 · ガラスに触れて、静かに進む</p>
+  </header>
+
+  <!-- Subject selector + settings toggle -->
+  <div class="subjects-row" id="subjects-row">
+    <!-- tabs generated by JS -->
+  </div>
+
+  <!-- Settings panel -->
+  <div class="settings-wrap" id="settings-wrap">
+    <div class="settings-inner">
+      <div class="settings-card">
+        <div class="settings-grid">
+          <div class="field full">
+            <label>科目名</label>
+            <input type="text" id="f-name" placeholder="例：情報学への誘い">
+          </div>
+          <div class="field">
+            <label>学期の開始日</label>
+            <input type="date" id="f-start">
+          </div>
+          <div class="field">
+            <label>単位認定試験の日程</label>
+            <input type="date" id="f-exam">
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn-save" id="btn-save">保存する</button>
+          <button class="btn-del" id="btn-del">この科目を削除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stained glass window -->
+  <div class="window-wrap">
+    <!--
+      SVG 300×455  Gothic arch clip: M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z
+      Cols: A x=19 w=83 cx=60 | B x=106 w=84 cx=148 | C x=194 w=83 cx=235
+      Rows: 1 y=7  h=72 cy=61(edge) | 2 y=83 | 3 y=159 | 4 y=235 | 5 y=311 (+72 each)
+      Exam: y=387 h=58 full-width
+    -->
+    <svg id="win" viewBox="0 0 300 455" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="ac">
+          <path d="M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z"/>
+        </clipPath>
+        <linearGradient id="sheen" x1="0%" y1="0%" x2="75%" y2="100%">
+          <stop offset="0%"   stop-color="rgba(255,255,255,0.055)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Leading -->
+      <path d="M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z" fill="#0b0703"/>
+
+      <!-- Panes -->
+      <g clip-path="url(#ac)" id="pg">
+        <rect class="gp" id="p0"  x="19"  y="7"   width="83" height="72" tabindex="0" role="button" aria-label="第1週"/>
+        <rect class="gp" id="p1"  x="106" y="7"   width="84" height="72" tabindex="0" role="button" aria-label="第2週"/>
+        <rect class="gp" id="p2"  x="194" y="7"   width="83" height="72" tabindex="0" role="button" aria-label="第3週"/>
+        <rect class="gp" id="p3"  x="19"  y="83"  width="83" height="72" tabindex="0" role="button" aria-label="第4週"/>
+        <rect class="gp" id="p4"  x="106" y="83"  width="84" height="72" tabindex="0" role="button" aria-label="第5週"/>
+        <rect class="gp" id="p5"  x="194" y="83"  width="83" height="72" tabindex="0" role="button" aria-label="第6週"/>
+        <rect class="gp" id="p6"  x="19"  y="159" width="83" height="72" tabindex="0" role="button" aria-label="第7週"/>
+        <rect class="gp" id="p7"  x="106" y="159" width="84" height="72" tabindex="0" role="button" aria-label="第8週"/>
+        <rect class="gp" id="p8"  x="194" y="159" width="83" height="72" tabindex="0" role="button" aria-label="第9週"/>
+        <rect class="gp" id="p9"  x="19"  y="235" width="83" height="72" tabindex="0" role="button" aria-label="第10週"/>
+        <rect class="gp" id="p10" x="106" y="235" width="84" height="72" tabindex="0" role="button" aria-label="第11週"/>
+        <rect class="gp" id="p11" x="194" y="235" width="83" height="72" tabindex="0" role="button" aria-label="第12週"/>
+        <rect class="gp" id="p12" x="19"  y="311" width="83" height="72" tabindex="0" role="button" aria-label="第13週"/>
+        <rect class="gp" id="p13" x="106" y="311" width="84" height="72" tabindex="0" role="button" aria-label="第14週"/>
+        <rect class="gp" id="p14" x="194" y="311" width="83" height="72" tabindex="0" role="button" aria-label="第15週"/>
+        <rect class="gp" id="p15" x="19"  y="387" width="261" height="58" tabindex="0" role="button" aria-label="単位認定試験"/>
+      </g>
+
+      <!-- Labels -->
+      <g clip-path="url(#ac)" id="lg" pointer-events="none">
+        <text class="gl" id="l0"  x="60"  y="61">第1週</text>
+        <text class="gl" id="l1"  x="148" y="43">第2週</text>
+        <text class="gl" id="l2"  x="235" y="61">第3週</text>
+        <text class="gl" id="l3"  x="60"  y="119">第4週</text>
+        <text class="gl" id="l4"  x="148" y="119">第5週</text>
+        <text class="gl" id="l5"  x="235" y="119">第6週</text>
+        <text class="gl" id="l6"  x="60"  y="195">第7週</text>
+        <text class="gl" id="l7"  x="148" y="195">第8週</text>
+        <text class="gl" id="l8"  x="235" y="195">第9週</text>
+        <text class="gl" id="l9"  x="60"  y="271">第10週</text>
+        <text class="gl" id="l10" x="148" y="271">第11週</text>
+        <text class="gl" id="l11" x="235" y="271">第12週</text>
+        <text class="gl" id="l12" x="60"  y="347">第13週</text>
+        <text class="gl" id="l13" x="148" y="347">第14週</text>
+        <text class="gl" id="l14" x="235" y="347">第15週</text>
+        <text class="gl" id="l15" x="149" y="416" font-size="10.5" letter-spacing="0.08em">単位認定試験</text>
+      </g>
+
+      <!-- Sheen -->
+      <rect clip-path="url(#ac)" x="0" y="0" width="300" height="455"
+            fill="url(#sheen)" pointer-events="none"/>
+
+      <!-- Frame -->
+      <path d="M 16 188 Q 16 14 150 5 Q 284 14 284 188 L 284 448 L 16 448 Z"
+            fill="none" stroke="#0b0703" stroke-width="9"/>
+      <path d="M 20 187 Q 20 19 150 10 Q 280 19 280 187 L 280 444 L 20 444 Z"
+            fill="none" stroke="rgba(200,158,58,0.07)" stroke-width="1.5"/>
+    </svg>
+  </div>
+
+  <!-- Context: exam date + current week soft hint -->
+  <p class="ctx-note" id="ctx"></p>
+
+  <!-- Progress -->
+  <p class="prog" id="prog">まだ灯りが待っています</p>
+
+  <!-- Message -->
+  <div class="card">
+    <span class="card-icon">🕯</span>
+    <p id="msg">ようこそ、あなただけの静かな場所へ。
+ガラスのピースに触れるだけでいい。急ぐ必要は、ここにはありません。</p>
+  </div>
+
+  <button class="reset-btn" id="rst">この科目の灯りをすべて消す</button>
+
+  <footer>あなたのペースが、あなたの正しいペースです</footer>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   study haven  —  multi-subject version
+   ══════════════════════════════════════════════════════════════ */
+
+const STORE = 'naoutani-haven-v2';
+
+const COLORS = [
+  '#c86520','#e89a20','#d07020',
+  '#e8ac1e','#bf7420','#d88c1a',
+  '#e09c1e','#c86c20','#d89e20',
+  '#e08c1e','#c86020','#d8a81a',
+  '#cf7c1e','#e0b41e','#c47618',
+  '#f0c02c'
+];
+
+const MSGS = {
+  welcome:  'ようこそ、あなただけの静かな場所へ。\nガラスのピースに触れるだけでいい。急ぐ必要は、ここにはありません。',
+  lit: [
+    'ステンドグラスに、新しい光が灯りましたね。\nあなたのペースで進んでいる。それが、ここでの唯一の正解です。',
+    'また一つ、あたたかな光が生まれました。\n積み重ねはゆっくりでいい。静かな流れが、いつか海に届くように。',
+    '灯りが増えるたびに、この書斎が少し明るくなります。\n今日のあなたの時間を、大切に思います。',
+    '光が灯ると、鉛線がより美しく見えますね。\nあなたが積み重ねてきた時間が、この光の中にあります。',
+    '一つひとつ、ゆっくりと。\nあなたの歩みは、誰かと比べるものではありません。',
+  ],
+  gentle: [
+    '焦らなくて大丈夫です。\n試験まで、まだ十分な余韻があります。今日はゆっくり温かいお茶でも飲みましょう。',
+    'たまには立ち止まる時間も、深い理解のためには大切なことがあります。\n窓の外の気配を感じながら、心を休めてくださいね。',
+    'ここに戻ってきたとき、灯りはいつも同じ場所で待っています。\nあなたのタイミングで、いつでも。',
+  ],
+  half:     '半分以上の灯りが、窓を照らし始めています。\n静かに、しかし確かに。あなたは自分の道を歩んでいます。',
+  near:     'もう少しです。でも急がなくていい。\nこの光の模様を、しばらく眺めていても構いません。',
+  weeksDone:'15週すべての灯りが揃いました。\nこの書斎が、こんなに明るくなる日が来ましたね。\nあとは試験という最後のピースを、あなたのタイミングで。',
+  all:      'すべてのステンドグラスに光が灯り、窓が完成しました。\n美しい模様が、あなたの静かな、しかし確かな歩みを証明しています。\nお疲れ様でした。',
+  dim: [
+    '灯りをそっと消しました。\nまたいつでも、あなたのタイミングで灯してくださいね。',
+    '消えた光は、また灯すことができます。\nここはいつも、あなたを待っています。',
+  ],
+  reset:    'すべての灯りを消しました。\n白紙のステンドグラスも、また美しいものです。\nいつでも、また始めてくださいね。',
+  saved:    '設定を保存しました。\n書斎の名前が変わると、また新しい気持ちになれますね。',
+};
+
+/* ── Data helpers ─────────────────────────── */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+function defaultSubject(name) {
+  return { id: uid(), name: name || '科目1', startDate: '', examDate: '', progress: [] };
+}
+
+function load() {
+  try {
+    const s = localStorage.getItem(STORE);
+    if (s) return JSON.parse(s);
+  } catch(_) {}
+  return { subjects: [defaultSubject('科目1')], currentId: null };
+}
+
+function save(state) {
+  localStorage.setItem(STORE, JSON.stringify(state));
+}
+
+/* ── State ────────────────────────────────── */
+let state = load();
+if (!state.subjects.length) state.subjects.push(defaultSubject('科目1'));
+if (!state.currentId || !state.subjects.find(s => s.id === state.currentId)) {
+  state.currentId = state.subjects[0].id;
+}
+
+function current() { return state.subjects.find(s => s.id === state.currentId); }
+function litSet()   { return new Set(current().progress); }
+
+/* ── DOM refs ─────────────────────────────── */
+const rowEl  = document.getElementById('subjects-row');
+const swEl   = document.getElementById('settings-wrap');
+const fName  = document.getElementById('f-name');
+const fStart = document.getElementById('f-start');
+const fExam  = document.getElementById('f-exam');
+const progEl = document.getElementById('prog');
+const ctxEl  = document.getElementById('ctx');
+const msgEl  = document.getElementById('msg');
+const rstBtn = document.getElementById('rst');
+
+const panes  = [...document.querySelectorAll('.gp')];
+const labels = [...document.querySelectorAll('.gl')];
+
+let settingsOpen = false;
+let msgTimer = null;
+
+/* ── Render subjects bar ─────────────────── */
+function renderSubjectsBar() {
+  rowEl.innerHTML = '';
+
+  state.subjects.forEach(sub => {
+    const btn = document.createElement('button');
+    btn.className = 'sub-tab' + (sub.id === state.currentId ? ' active' : '');
+    btn.textContent = sub.name;
+    btn.addEventListener('click', () => switchSubject(sub.id));
+    rowEl.appendChild(btn);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-sub';
+  addBtn.textContent = '＋';
+  addBtn.title = '新しい科目を追加';
+  addBtn.addEventListener('click', addSubject);
+  rowEl.appendChild(addBtn);
+
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'btn-settings' + (settingsOpen ? ' active' : '');
+  settingsBtn.id = 'btn-settings';
+  settingsBtn.textContent = '⚙';
+  settingsBtn.title = '設定';
+  settingsBtn.addEventListener('click', toggleSettings);
+  rowEl.appendChild(settingsBtn);
+}
+
+/* ── Settings panel ──────────────────────── */
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  swEl.classList.toggle('open', settingsOpen);
+  renderSubjectsBar(); // refresh btn state
+
+  if (settingsOpen) {
+    const sub = current();
+    fName.value  = sub.name;
+    fStart.value = sub.startDate || '';
+    fExam.value  = sub.examDate  || '';
+  }
+}
+
+document.getElementById('btn-save').addEventListener('click', () => {
+  const sub = current();
+  sub.name      = fName.value.trim() || '科目';
+  sub.startDate = fStart.value;
+  sub.examDate  = fExam.value;
+  save(state);
+  renderSubjectsBar();
+  updateContext();
+  showMsg('saved');
+});
+
+document.getElementById('btn-del').addEventListener('click', () => {
+  if (state.subjects.length <= 1) {
+    // Reset instead of delete when only one subject
+    current().name = '科目1';
+    current().startDate = '';
+    current().examDate = '';
+    current().progress = [];
+    fName.value = '科目1';
+    fStart.value = '';
+    fExam.value = '';
+    save(state);
+    renderWindow();
+    renderSubjectsBar();
+    updateContext();
+    updateProg();
+    showMsg('reset');
+    return;
+  }
+  const idx = state.subjects.findIndex(s => s.id === state.currentId);
+  state.subjects.splice(idx, 1);
+  state.currentId = state.subjects[Math.max(0, idx - 1)].id;
+  save(state);
+  settingsOpen = false;
+  swEl.classList.remove('open');
+  renderSubjectsBar();
+  renderWindow();
+  updateContext();
+  updateProg();
+  showMsg('reset');
+});
+
+/* ── Add / switch subjects ───────────────── */
+function addSubject() {
+  const sub = defaultSubject(`科目${state.subjects.length + 1}`);
+  state.subjects.push(sub);
+  state.currentId = sub.id;
+  save(state);
+  settingsOpen = true;
+  swEl.classList.add('open');
+  fName.value  = sub.name;
+  fStart.value = '';
+  fExam.value  = '';
+  renderSubjectsBar();
+  renderWindow();
+  updateContext();
+  updateProg();
+  msgEl.textContent = MSGS.welcome;
+}
+
+function switchSubject(id) {
+  if (id === state.currentId && settingsOpen) { toggleSettings(); return; }
+  state.currentId = id;
+  if (settingsOpen) {
+    const sub = current();
+    fName.value  = sub.name;
+    fStart.value = sub.startDate || '';
+    fExam.value  = sub.examDate  || '';
+  }
+  save(state);
+  renderSubjectsBar();
+  renderWindow();
+  updateContext();
+  updateProg();
+  msgEl.textContent = MSGS.welcome;
+}
+
+/* ── Window render ───────────────────────── */
+function lightUp(i, sub) {
+  if (!sub.progress.includes(i)) sub.progress.push(i);
+  panes[i].style.fill = COLORS[i];
+  panes[i].classList.add('lit');
+  labels[i].classList.add('on');
+}
+
+function dimDown(i, sub) {
+  sub.progress = sub.progress.filter(x => x !== i);
+  panes[i].style.fill = '';
+  panes[i].classList.remove('lit');
+  labels[i].classList.remove('on');
+}
+
+function renderWindow() {
+  const sub = current();
+  const litArr = new Set(sub.progress);
+  panes.forEach((p, i) => {
+    p.style.fill = '';
+    p.classList.remove('lit');
+    labels[i].classList.remove('on');
+  });
+  litArr.forEach(i => {
+    if (i >= 0 && i < panes.length) {
+      panes[i].style.fill = COLORS[i];
+      panes[i].classList.add('lit');
+      labels[i].classList.add('on');
+    }
+  });
+}
+
+/* ── Context note (exam date + week hint) ── */
+function updateContext() {
+  const sub = current();
+  const lines = [];
+
+  if (sub.examDate) {
+    const d = new Date(sub.examDate);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+    lines.push(`試験の目安 <strong>${m}月${day}日（${dow}）</strong>`);
+  }
+
+  if (sub.startDate) {
+    const start = new Date(sub.startDate);
+    const today = new Date();
+    const diffDays = Math.floor((today - start) / 86400000);
+    const weekNum  = Math.floor(diffDays / 7) + 1;
+    if (weekNum >= 1 && weekNum <= 15) {
+      lines.push(`カレンダー上は <strong>第${weekNum}週</strong> のあたりです`);
+    }
+  }
+
+  ctxEl.innerHTML = lines.join('　　');
+}
+
+/* ── Progress text ───────────────────────── */
+function updateProg() {
+  const sub   = current();
+  const lit   = new Set(sub.progress);
+  const weeks = [...lit].filter(i => i < 15).length;
+  const exam  = lit.has(15);
+  const total = lit.size;
+
+  if (total === 0) {
+    progEl.innerHTML = 'まだ灯りが待っています';
+  } else if (total === 16) {
+    progEl.innerHTML = '<strong>学習の旅、完結</strong>';
+  } else {
+    let t = `<strong>${weeks}</strong>&thinsp;/&thinsp;15週 完了`;
+    if (exam) t += '　試験 <strong>✓</strong>';
+    progEl.innerHTML = t;
+  }
+}
+
+/* ── Message ─────────────────────────────── */
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pickMsg(event) {
+  const sub   = current();
+  const lit   = new Set(sub.progress);
+  const weeks = [...lit].filter(i => i < 15).length;
+  const total = lit.size;
+
+  if (event === 'saved')  return MSGS.saved;
+  if (event === 'reset')  return MSGS.reset;
+  if (event === 'dim')    return rand(MSGS.dim);
+
+  if (total === 16)       return MSGS.all;
+  if (weeks === 15)       return MSGS.weeksDone;
+  if (weeks >= 10)        return MSGS.near;
+  if (weeks >= 8)         return MSGS.half;
+
+  return Math.random() < 0.28 ? rand(MSGS.gentle) : rand(MSGS.lit);
+}
+
+function showMsg(event) {
+  if (msgTimer) clearTimeout(msgTimer);
+  msgEl.classList.add('fade');
+  msgTimer = setTimeout(() => {
+    msgEl.textContent = pickMsg(event);
+    msgEl.classList.remove('fade');
+  }, 560);
+}
+
+/* ── Toggle pane ─────────────────────────── */
+function togglePane(i) {
+  const sub = current();
+  const wasLit = sub.progress.includes(i);
+  if (wasLit) { dimDown(i, sub); showMsg('dim'); }
+  else        { lightUp(i, sub); showMsg('lit'); }
+  save(state);
+  updateProg();
+}
+
+/* ── Wire panes ──────────────────────────── */
+panes.forEach((p, i) => {
+  p.addEventListener('click', () => togglePane(i));
+  p.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePane(i); }
+  });
+});
+
+rstBtn.addEventListener('click', () => {
+  const sub = current();
+  if (!sub.progress.length) return;
+  sub.progress.forEach(i => dimDown(i, sub));
+  sub.progress = [];
+  save(state);
+  updateProg();
+  showMsg('reset');
+});
+
+/* ── Boot ────────────────────────────────── */
+renderSubjectsBar();
+renderWindow();
+updateContext();
+updateProg();
+</script>
+</body>
+</html>

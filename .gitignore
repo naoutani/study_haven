@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Node（将来使うかもしれないので念のため）
+node_modules/
+
+# Claude Code の設定（ローカル専用）
+.claude/
