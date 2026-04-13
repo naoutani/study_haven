@@ -822,25 +822,56 @@ function resetAuthForm() {
   pendingEmail          = '';
 }
 
+/* ── 書斎を開く／閉じる（唯一の入口） ────── */
+async function enterStudy(user) {
+  if (!user || currentUser) return;   // 二重呼び出し防止
+  currentUser = user;
+  try { await initApp(); } catch (e) { console.error('initApp error:', e); }
+  loadingOverlay.hidden = true;
+  authOverlay.hidden    = true;
+  mainApp.hidden        = false;
+}
+
+function exitStudy() {
+  currentUser = null;
+  state = { subjects: [], currentId: null };
+  mainApp.hidden     = true;
+  authOverlay.hidden = false;
+  resetAuthForm();
+}
+
+function showLogin() {
+  loadingOverlay.hidden = true;
+  authOverlay.hidden    = false;
+}
+
 /* ── Auth: ① メール送信 ──────────────────── */
 authBtnEl.addEventListener('click', async () => {
   const email = authEmailEl.value.trim();
   if (!email) return;
   authBtnEl.disabled = true;
   authBtnEl.textContent = '送信中...';
-  const { error } = await sb.auth.signInWithOtp({ email });
-  if (error) {
+  try {
+    const { error } = await sb.auth.signInWithOtp({ email });
+    if (error) {
+      authBtnEl.disabled = false;
+      authBtnEl.textContent = 'コードを送る';
+      authSentEl.hidden = false;
+      authSentEl.textContent = authErrMsg(error.message);
+    } else {
+      pendingEmail = email;
+      authFormEl.hidden     = true;
+      authCodeFormEl.hidden = false;
+      authSentEl.hidden     = false;
+      authSentEl.innerHTML  = 'メールに届いたコードを入力してください。';
+      authCodeEl.focus();
+    }
+  } catch (e) {
+    console.error('signInWithOtp error:', e);
     authBtnEl.disabled = false;
     authBtnEl.textContent = 'コードを送る';
     authSentEl.hidden = false;
-    authSentEl.textContent = authErrMsg(error.message);
-  } else {
-    pendingEmail = email;
-    authFormEl.hidden     = true;
-    authCodeFormEl.hidden = false;
-    authSentEl.hidden     = false;
-    authSentEl.innerHTML  = 'メールに届いたコードを入力してください。';
-    authCodeEl.focus();
+    authSentEl.textContent = authErrMsg(e?.message);
   }
 });
 
@@ -857,25 +888,41 @@ authCodeBtnEl.addEventListener('click', async () => {
   if (!code || !pendingEmail) return;
   authCodeBtnEl.disabled = true;
   authCodeBtnEl.textContent = '確認中...';
-  const { data, error } = await sb.auth.verifyOtp({
-    email: pendingEmail,
-    token: code,
-    type: 'email'
-  });
-  if (error) {
+  try {
+    const { data, error } = await sb.auth.verifyOtp({
+      email: pendingEmail,
+      token: code,
+      type: 'email'
+    });
+    if (error) {
+      authCodeBtnEl.disabled = false;
+      authCodeBtnEl.textContent = 'ログイン';
+      authSentEl.innerHTML = authErrMsg(error.message);
+      return;
+    }
+    authSentEl.innerHTML = '確認できました。書斎を開いています...';
+
+    // ① verifyOtp の返り値から直接ユーザーを取得
+    const user = data?.session?.user ?? data?.user ?? null;
+    if (user) { await enterStudy(user); return; }
+
+    // ② 取れなかった場合、少し待って getSession でフォールバック
+    await new Promise(r => setTimeout(r, 600));
+    if (currentUser) return;  // onAuthStateChange が先に処理した
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session?.user) { await enterStudy(session.user); return; }
+    } catch (_) {}
+
+    // ③ それでもダメなら再試行を促す
     authCodeBtnEl.disabled = false;
     authCodeBtnEl.textContent = 'ログイン';
-    authSentEl.innerHTML = authErrMsg(error.message);
-  } else {
-    authSentEl.innerHTML = '確認できました。書斎を開いています...';
-    const user = data?.session?.user ?? data?.user ?? null;
-    if (user && !currentUser) {
-      currentUser = user;
-      try { await initApp(); } catch (e) { console.error('initApp error:', e); }
-      loadingOverlay.hidden = true;
-      authOverlay.hidden    = true;
-      mainApp.hidden        = false;
-    }
+    authSentEl.innerHTML = 'セッション取得に失敗しました。もう一度お試しください。';
+  } catch (e) {
+    console.error('verifyOtp error:', e);
+    authCodeBtnEl.disabled = false;
+    authCodeBtnEl.textContent = 'ログイン';
+    authSentEl.innerHTML = authErrMsg(e?.message);
   }
 });
 
@@ -884,36 +931,33 @@ authCodeEl.addEventListener('keydown', e => {
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await sb.auth.signOut();
+  try { await sb.auth.signOut(); } catch (_) {}
 });
 
 /* ── Auth state ────────────────────────────── */
 
-// ローディングタイムアウト（8秒経っても応答なければログイン画面へ）
+// ローディングタイムアウト（5秒経っても応答なければログイン画面へ）
 const loadingTimeout = setTimeout(() => {
-  if (!loadingOverlay.hidden) {
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = false;
-  }
-}, 8000);
+  if (!loadingOverlay.hidden) showLogin();
+}, 5000);
 
 // ページ読み込み時にセッションを確認（ログイン済みの場合）
 (async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  clearTimeout(loadingTimeout);
-  if (session?.user) {
-    currentUser = session.user;
-    try {
-      await initApp();
-    } catch (e) {
-      console.error('initApp error:', e);
+  try {
+    const { data: { session }, error } = await sb.auth.getSession();
+    clearTimeout(loadingTimeout);
+    if (!error && session?.user) {
+      await enterStudy(session.user);
+    } else {
+      if (error) {
+        try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+      }
+      showLogin();
     }
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = true;
-    mainApp.hidden        = false;
-  } else {
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = false;
+  } catch (e) {
+    clearTimeout(loadingTimeout);
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+    showLogin();
   }
 })();
 
@@ -921,20 +965,9 @@ const loadingTimeout = setTimeout(() => {
 sb.auth.onAuthStateChange(async (event, session) => {
   const user = session?.user ?? null;
   if (user && !currentUser) {
-    currentUser = user;
-    try {
-      await initApp();
-    } catch (e) {
-      console.error('initApp error:', e);
-    }
-    loadingOverlay.hidden = true;
-    authOverlay.hidden    = true;
-    mainApp.hidden        = false;
+    await enterStudy(user);
   } else if (!user && currentUser) {
-    currentUser = null;
-    state = { subjects: [], currentId: null };
-    mainApp.hidden     = true;
-    authOverlay.hidden = false;
+    exitStudy();
   }
 });
 
