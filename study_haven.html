@@ -867,8 +867,16 @@ authCodeBtnEl.addEventListener('click', async () => {
     authCodeBtnEl.textContent = 'ログイン';
     authSentEl.innerHTML = authErrMsg(error.message);
   } else {
-    // 成功 → onAuthStateChange が SIGNED_IN を検知して書斎を開く
     authSentEl.innerHTML = '確認できました。書斎を開いています...';
+    // onAuthStateChange が来ない場合のフォールバック
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user && !currentUser) {
+      currentUser = session.user;
+      try { await initApp(); } catch (e) { console.error('initApp error:', e); }
+      loadingOverlay.hidden = true;
+      authOverlay.hidden    = true;
+      mainApp.hidden        = false;
+    }
   }
 });
 
