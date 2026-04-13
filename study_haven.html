@@ -857,7 +857,7 @@ authCodeBtnEl.addEventListener('click', async () => {
   if (!code || !pendingEmail) return;
   authCodeBtnEl.disabled = true;
   authCodeBtnEl.textContent = '確認中...';
-  const { error } = await sb.auth.verifyOtp({
+  const { data, error } = await sb.auth.verifyOtp({
     email: pendingEmail,
     token: code,
     type: 'email'
@@ -868,10 +868,9 @@ authCodeBtnEl.addEventListener('click', async () => {
     authSentEl.innerHTML = authErrMsg(error.message);
   } else {
     authSentEl.innerHTML = '確認できました。書斎を開いています...';
-    // onAuthStateChange が来ない場合のフォールバック
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user && !currentUser) {
-      currentUser = session.user;
+    const user = data?.session?.user ?? data?.user ?? null;
+    if (user && !currentUser) {
+      currentUser = user;
       try { await initApp(); } catch (e) { console.error('initApp error:', e); }
       loadingOverlay.hidden = true;
       authOverlay.hidden    = true;
