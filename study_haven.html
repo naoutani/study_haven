@@ -824,12 +824,26 @@ function resetAuthForm() {
 
 /* ── 書斎を開く／閉じる（唯一の入口） ────── */
 async function enterStudy(user) {
-  if (!user || currentUser) return;   // 二重呼び出し防止
+  if (!user || currentUser) return false;  // 二重呼び出し防止
   currentUser = user;
-  try { await initApp(); } catch (e) { console.error('initApp error:', e); }
+  try {
+    await Promise.race([
+      initApp(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+    ]);
+  } catch (e) {
+    console.error('initApp error:', e);
+    // タイムアウトやDB接続失敗でもデフォルト状態で起動する
+    if (!state.subjects.length) {
+      state.subjects = [defaultSubject('科目1')];
+      state.currentId = state.subjects[0].id;
+      renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
+    }
+  }
   loadingOverlay.hidden = true;
   authOverlay.hidden    = true;
   mainApp.hidden        = false;
+  return true;
 }
 
 function exitStudy() {
@@ -904,17 +918,46 @@ authCodeBtnEl.addEventListener('click', async () => {
 
     // ① verifyOtp の返り値から直接ユーザーを取得
     const user = data?.session?.user ?? data?.user ?? null;
-    if (user) { await enterStudy(user); return; }
 
-    // ② 取れなかった場合、少し待って getSession でフォールバック
-    await new Promise(r => setTimeout(r, 600));
-    if (currentUser) return;  // onAuthStateChange が先に処理した
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session?.user) { await enterStudy(session.user); return; }
-    } catch (_) {}
+    if (user) {
+      const opened = await enterStudy(user);
+      if (!opened && currentUser) {
+        // onAuthStateChange が先に処理済み → UI だけ切り替え
+        loadingOverlay.hidden = true;
+        authOverlay.hidden    = true;
+        mainApp.hidden        = false;
+      }
+      if (opened || currentUser) return;
+    }
 
-    // ③ それでもダメなら再試行を促す
+    // ② 直接取れなかった場合、getSession でフォールバック
+    if (!currentUser) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+    if (!currentUser) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+          const opened = await enterStudy(session.user);
+          if (!opened && currentUser) {
+            loadingOverlay.hidden = true;
+            authOverlay.hidden    = true;
+            mainApp.hidden        = false;
+          }
+          if (opened || currentUser) return;
+        }
+      } catch (_) {}
+    }
+
+    // ③ currentUser がセットされていれば成功（onAuthStateChange 経由）
+    if (currentUser) {
+      loadingOverlay.hidden = true;
+      authOverlay.hidden    = true;
+      mainApp.hidden        = false;
+      return;
+    }
+
+    // ④ すべて失敗 → 再試行を促す
     authCodeBtnEl.disabled = false;
     authCodeBtnEl.textContent = 'ログイン';
     authSentEl.innerHTML = 'セッション取得に失敗しました。もう一度お試しください。';
@@ -941,7 +984,19 @@ const loadingTimeout = setTimeout(() => {
   if (!loadingOverlay.hidden) showLogin();
 }, 5000);
 
-// ページ読み込み時にセッションを確認（ログイン済みの場合）
+// ログイン・ログアウト後の変化を監視
+// ※ INITIAL_SESSION は getSession() で処理するので無視する（競合防止）
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'INITIAL_SESSION') return;
+  const user = session?.user ?? null;
+  if (event === 'SIGNED_IN' && user && !currentUser) {
+    await enterStudy(user);
+  } else if (event === 'SIGNED_OUT' && currentUser) {
+    exitStudy();
+  }
+});
+
+// ページ読み込み時にセッションを確認（唯一の初期セッション判定）
 (async () => {
   try {
     const { data: { session }, error } = await sb.auth.getSession();
@@ -960,16 +1015,6 @@ const loadingTimeout = setTimeout(() => {
     showLogin();
   }
 })();
-
-// ログイン・ログアウト後の変化を監視
-sb.auth.onAuthStateChange(async (event, session) => {
-  const user = session?.user ?? null;
-  if (user && !currentUser) {
-    await enterStudy(user);
-  } else if (!user && currentUser) {
-    exitStudy();
-  }
-});
 
 /* ── UUID helper ───────────────────────────── */
 function uid() {
