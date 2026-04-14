@@ -823,9 +823,12 @@ function resetAuthForm() {
 }
 
 /* ── 書斎を開く／閉じる（唯一の入口） ────── */
+let _initAborted = false;
+
 async function enterStudy(user) {
   if (!user || currentUser) return false;  // 二重呼び出し防止
   currentUser = user;
+  _initAborted = false;
   try {
     await Promise.race([
       initApp(),
@@ -833,6 +836,7 @@ async function enterStudy(user) {
     ]);
   } catch (e) {
     console.error('initApp error:', e);
+    _initAborted = true;  // タイムアウト後の initApp 完走を抑止
     // タイムアウトやDB接続失敗でもデフォルト状態で起動する
     if (!state.subjects.length) {
       state.subjects = [defaultSubject('科目1')];
@@ -849,6 +853,10 @@ async function enterStudy(user) {
 function exitStudy() {
   currentUser = null;
   state = { subjects: [], currentId: null };
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (rstTimer)  { clearTimeout(rstTimer);  rstTimer = null; }
+  if (msgTimer)  { clearTimeout(msgTimer);  msgTimer = null; }
+  rstConfirm = false;
   mainApp.hidden     = true;
   authOverlay.hidden = false;
   resetAuthForm();
@@ -1414,7 +1422,9 @@ rstBtn.addEventListener('click', () => {
 
 /* ── Init ─────────────────────────────────── */
 async function initApp() {
-  state = await loadFromSupabase();
+  const loaded = await loadFromSupabase();
+  if (_initAborted) return;  // タイムアウト後に完走した場合、state を上書きしない
+  state = loaded;
   if (!state.subjects.length) state.subjects.push(defaultSubject('科目1'));
   if (!state.currentId || !state.subjects.find(s => s.id === state.currentId)) {
     state.currentId = state.subjects[0].id;
