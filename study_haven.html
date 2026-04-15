@@ -922,53 +922,10 @@ authCodeBtnEl.addEventListener('click', async () => {
       authSentEl.innerHTML = authErrMsg(error.message);
       return;
     }
+    // 認証成功 → ページをリロードして getSession() に任せる
+    // これにより onAuthStateChange との競合を完全に回避する
     authSentEl.innerHTML = '確認できました。書斎を開いています...';
-
-    // ① verifyOtp の返り値から直接ユーザーを取得
-    const user = data?.session?.user ?? data?.user ?? null;
-
-    if (user) {
-      const opened = await enterStudy(user);
-      if (!opened && currentUser) {
-        // onAuthStateChange が先に処理済み → UI だけ切り替え
-        loadingOverlay.hidden = true;
-        authOverlay.hidden    = true;
-        mainApp.hidden        = false;
-      }
-      if (opened || currentUser) return;
-    }
-
-    // ② 直接取れなかった場合、getSession でフォールバック
-    if (!currentUser) {
-      await new Promise(r => setTimeout(r, 500));
-    }
-    if (!currentUser) {
-      try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session?.user) {
-          const opened = await enterStudy(session.user);
-          if (!opened && currentUser) {
-            loadingOverlay.hidden = true;
-            authOverlay.hidden    = true;
-            mainApp.hidden        = false;
-          }
-          if (opened || currentUser) return;
-        }
-      } catch (_) {}
-    }
-
-    // ③ currentUser がセットされていれば成功（onAuthStateChange 経由）
-    if (currentUser) {
-      loadingOverlay.hidden = true;
-      authOverlay.hidden    = true;
-      mainApp.hidden        = false;
-      return;
-    }
-
-    // ④ すべて失敗 → 再試行を促す
-    authCodeBtnEl.disabled = false;
-    authCodeBtnEl.textContent = 'ログイン';
-    authSentEl.innerHTML = 'セッション取得に失敗しました。もう一度お試しください。';
+    location.reload();
   } catch (e) {
     console.error('verifyOtp error:', e);
     authCodeBtnEl.disabled = false;
