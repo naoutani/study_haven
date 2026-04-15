@@ -836,13 +836,12 @@ async function enterStudy(user) {
     ]);
   } catch (e) {
     console.error('initApp error:', e);
-    _initAborted = true;  // タイムアウト後の initApp 完走を抑止
-    // タイムアウトやDB接続失敗でもデフォルト状態で起動する
-    if (!state.subjects.length) {
-      state.subjects = [defaultSubject('科目1')];
-      state.currentId = state.subjects[0].id;
-      renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
-    }
+    _initAborted = true;
+    // セッションが無効（DBに到達できない）→ ログアウトしてやり直し
+    currentUser = null;
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+    showLogin();
+    return false;
   }
   loadingOverlay.hidden = true;
   authOverlay.hidden    = true;
@@ -1030,10 +1029,21 @@ function defaultSubject(name) {
 
 /* ── Supabase data operations ───────────────── */
 async function loadFromSupabase() {
-  const { data, error } = await sb.from('subjects')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('sort_order', { ascending: true });
+  let data, error;
+  try {
+    const result = await Promise.race([
+      sb.from('subjects')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('sort_order', { ascending: true }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('db_timeout')), 8000))
+    ]);
+    data  = result.data;
+    error = result.error;
+  } catch (e) {
+    console.error('loadFromSupabase timeout/error:', e);
+    error = e;
+  }
 
   if (error) {
     console.error('load error:', error);
