@@ -837,11 +837,12 @@ async function enterStudy(user) {
   } catch (e) {
     console.error('initApp error:', e);
     _initAborted = true;
-    // セッションが無効（DBに到達できない）→ ログアウトしてやり直し
-    currentUser = null;
-    try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
-    showLogin();
-    return false;
+    // DB接続失敗でもデフォルト状態でアプリを起動する（ログアウトしない）
+    if (!state.subjects.length) {
+      state.subjects = [defaultSubject('科目1')];
+      state.currentId = state.subjects[0].id;
+      renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
+    }
   }
   loadingOverlay.hidden = true;
   authOverlay.hidden    = true;
@@ -921,10 +922,9 @@ authCodeBtnEl.addEventListener('click', async () => {
       authSentEl.innerHTML = authErrMsg(error.message);
       return;
     }
-    // 認証成功 → ページをリロードして getSession() に任せる
-    // これにより onAuthStateChange との競合を完全に回避する
+    // 認証成功 → セッション保存を待ってからリロードし getSession() に任せる
     authSentEl.innerHTML = '確認できました。書斎を開いています...';
-    location.reload();
+    setTimeout(() => location.reload(), 500);
   } catch (e) {
     console.error('verifyOtp error:', e);
     authCodeBtnEl.disabled = false;
