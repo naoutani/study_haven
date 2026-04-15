@@ -924,6 +924,12 @@ authCodeBtnEl.addEventListener('click', async () => {
     }
 
     // 認証成功 → リロードせず直接アプリを開く
+    console.log('[auth] verifyOtp success:', JSON.stringify({
+      hasSession: !!data?.session,
+      hasSessionUser: !!data?.session?.user,
+      hasUser: !!data?.user,
+      currentUser: !!currentUser
+    }));
     const user = data?.session?.user ?? data?.user ?? null;
     if (!user) {
       // verifyOtp からユーザーが取れない場合 getSession で1回だけ試す
@@ -977,42 +983,59 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 
 /* ── Auth state ────────────────────────────── */
 
-// ローディングタイムアウト（5秒経っても応答なければログイン画面へ）
-const loadingTimeout = setTimeout(() => {
-  if (!loadingOverlay.hidden) showLogin();
-}, 5000);
+// ── 認証スキップモード ──
+// URL に ?noauth を付けるか、コンソールで localStorage.setItem('study_haven_noauth','1') で有効化
+const _noauth = new URLSearchParams(location.search).has('noauth')
+             || localStorage.getItem('study_haven_noauth') === '1';
 
-// ログイン・ログアウト後の変化を監視
-// ※ INITIAL_SESSION は getSession() で処理するので無視する（競合防止）
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'INITIAL_SESSION') return;
-  const user = session?.user ?? null;
-  if (event === 'SIGNED_IN' && user && !currentUser) {
-    await enterStudy(user);
-  } else if (event === 'SIGNED_OUT' && currentUser) {
-    exitStudy();
-  }
-});
+if (_noauth) {
+  // 認証なしで即起動（ローカルストレージのみでデータ管理）
+  console.log('[study_haven] noauth mode');
+  currentUser = { id: 'local' };
+  state.subjects = [defaultSubject('科目1')];
+  state.currentId = state.subjects[0].id;
+  renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
+  loadingOverlay.hidden = true;
+  authOverlay.hidden    = true;
+  mainApp.hidden        = false;
+} else {
+  // ── 通常の認証フロー ──
+  const loadingTimeout = setTimeout(() => {
+    if (!loadingOverlay.hidden) showLogin();
+  }, 5000);
 
-// ページ読み込み時にセッションを確認（唯一の初期セッション判定）
-(async () => {
-  try {
-    const { data: { session }, error } = await sb.auth.getSession();
-    clearTimeout(loadingTimeout);
-    if (!error && session?.user) {
-      await enterStudy(session.user);
-    } else {
-      if (error) {
-        try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+  sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('[auth] onAuthStateChange:', event, !!session?.user);
+    if (event === 'INITIAL_SESSION') return;
+    const user = session?.user ?? null;
+    if (event === 'SIGNED_IN' && user && !currentUser) {
+      await enterStudy(user);
+    } else if (event === 'SIGNED_OUT' && currentUser) {
+      exitStudy();
+    }
+  });
+
+  (async () => {
+    try {
+      const { data: { session }, error } = await sb.auth.getSession();
+      console.log('[auth] getSession:', { hasUser: !!session?.user, error: error?.message });
+      clearTimeout(loadingTimeout);
+      if (!error && session?.user) {
+        await enterStudy(session.user);
+      } else {
+        if (error) {
+          try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+        }
+        showLogin();
       }
+    } catch (e) {
+      console.error('[auth] getSession threw:', e);
+      clearTimeout(loadingTimeout);
+      try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
       showLogin();
     }
-  } catch (e) {
-    clearTimeout(loadingTimeout);
-    try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
-    showLogin();
-  }
-})();
+  })();
+}
 
 /* ── UUID helper ───────────────────────────── */
 function uid() {
