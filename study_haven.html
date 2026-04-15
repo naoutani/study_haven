@@ -922,9 +922,43 @@ authCodeBtnEl.addEventListener('click', async () => {
       authSentEl.innerHTML = authErrMsg(error.message);
       return;
     }
-    // 認証成功 → セッション保存を待ってからリロードし getSession() に任せる
-    authSentEl.innerHTML = '確認できました。書斎を開いています...';
-    setTimeout(() => location.reload(), 500);
+
+    // 認証成功 → リロードせず直接アプリを開く
+    const user = data?.session?.user ?? data?.user ?? null;
+    if (!user) {
+      // verifyOtp からユーザーが取れない場合 getSession で1回だけ試す
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user && !currentUser) {
+          currentUser = session.user;
+        }
+      } catch (_) {}
+    } else if (!currentUser) {
+      currentUser = user;
+    }
+
+    if (currentUser) {
+      // まずデフォルト状態で即座に書斎を表示
+      state.subjects = [defaultSubject('科目1')];
+      state.currentId = state.subjects[0].id;
+      renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
+      loadingOverlay.hidden = true;
+      authOverlay.hidden    = true;
+      mainApp.hidden        = false;
+
+      // バックグラウンドでDBからデータを読み込む（失敗しても書斎は開いたまま）
+      loadFromSupabase().then(loaded => {
+        if (loaded && loaded.subjects.length) {
+          state = loaded;
+          state.currentId = state.currentId || state.subjects[0].id;
+          renderSubjectsBar(); renderWindow(); updateContext(); updateProg();
+        }
+      }).catch(e => console.error('background load:', e));
+    } else {
+      authCodeBtnEl.disabled = false;
+      authCodeBtnEl.textContent = 'ログイン';
+      authSentEl.innerHTML = 'セッション取得に失敗しました。ページを再読み込みしてお試しください。';
+    }
   } catch (e) {
     console.error('verifyOtp error:', e);
     authCodeBtnEl.disabled = false;
@@ -1053,7 +1087,8 @@ async function loadFromSupabase() {
 
   if (!data || data.length === 0) {
     const sub = defaultSubject('科目1');
-    await upsertSubject(sub, 0);
+    // upsertはバックグラウンドで（ハングしても loadFromSupabase を止めない）
+    upsertSubject(sub, 0).catch(e => console.error('initial upsert:', e));
     return { subjects: [sub], currentId: sub.id };
   }
 
